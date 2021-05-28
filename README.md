@@ -1,9 +1,8 @@
-# Web construction
+# Data-hub
 - [data-hub](https://ntupsc.github.io/data-hub)
   - [ ] Open sheet data url redirection.
-- [github albums (testing)](https://ntupsc.github.io/albums/)
-- [google site for album (testing)](https://sites.google.com/view/ntupsc/home)
 
+<hr>
 # Data package for R
 Repo [pscdata](https://github.com/ntupsc/pscdata)
 
@@ -16,3 +15,9 @@ devtools::install_github("ntupsc/pscdata")
 *2021/05/24 Updated*
 - 109 MOI demography data including education, gender, age and marriage status
 - 2018 referendum result
+
+
+<hr>
+- Under-construction
+  - [] [github albums (testing)](https://ntupsc.github.io/albums/)
+  - [] [google site for album (testing)](https://sites.google.com/view/ntupsc/home)
