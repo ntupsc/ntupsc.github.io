@@ -1,5 +1,5 @@
 # Data-hub
-- [data-hub](https://ntupsc.github.io/data-hub)
+- [人口、性別與選舉資料彙整應用網](https://ntupsc.github.io/data-hub)
 - [ ] Open sheet data url redirection.
 
 <hr>
