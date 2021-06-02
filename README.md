@@ -1,6 +1,5 @@
 # Data-hub
 - [人口、性別與選舉資料彙整應用網](https://ntupsc.github.io/data-hub)
-- [ ] Open sheet data url redirection.
 
 <hr>
 # Data package for R
@@ -28,5 +27,5 @@ devtools::install_github("ntupsc/pscdata")
 <hr>
 # Under-construction
 
-- [ ] [github albums (testing)](https://ntupsc.github.io/albums/)
-- [ ] [google site for album (testing)](https://sites.google.com/view/ntupsc/home)
+- [github albums (testing)](https://ntupsc.github.io/albums/)
+- [google site for album (testing)](https://sites.google.com/view/ntupsc/home)
