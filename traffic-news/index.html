@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行人地獄真的改善了嗎？修法一年半後的台北數據檢驗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* 汽車動畫相關樣式 */
+        .car-container {
+            position: absolute;
+            top: 70%;
+            left: -150px;
+            z-index: 20;
+            width: 150px;
+            transform: translateY(-50%);
+            transition: left 0.05s linear;
+        }
+        
+        @keyframes carLights {
+            0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 0, 0, 0.7)); }
+            50% { filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.9)); }
+        }
+        
+        .car-lights {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            width: 8px;
+            height: 8px;
+            background-color: red;
+            border-radius: 50%;
+            animation: carLights 1s infinite;
+        }
+        
+        .car-headlight {
+            position: absolute;
+            left: 5px;
+            top: 45%;
+            width: 10px;
+            height: 10px;
+            background-color: yellow;
+            border-radius: 50%;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 200, 0.8));
+        }
+        
+        .road-line {
+            position: absolute;
+            bottom: 25%;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: rgba(255, 255, 255, 0.5);
+            z-index: 15;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- 滿版 Banner -->
+    <div class="relative h-screen">
+        <div class="absolute inset-0">
+            <img src="https://images.unsplash.com/photo-1464219789935-c2d9d9aba644?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
+                 alt="交通照片" 
+                 class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-black opacity-60"></div>
+        </div>
+        
+        <!-- 道路線 -->
+        <div class="road-line"></div>
+        
+        <!-- 汽車元素 -->
+        <div class="car-container" id="car">
+            <div class="car-headlight"></div>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="white">
+                <path d="M640 320V368C640 385.7 625.7 400 608 400H574.7C567.1 445.4 527.6 480 480 480C432.4 480 392.9 445.4 385.3 400H254.7C247.1 445.4 207.6 480 160 480C112.4 480 72.89 445.4 65.33 400H32C14.33 400 0 385.7 0 368V256C0 228.9 16.81 205.8 40.56 196.4L82.2 92.35C96.78 55.9 132.1 32 171.3 32H353.2C382.4 32 409.1 45.26 428.2 68.03L528.2 193C591.2 200.1 640 254.8 640 320V320zM171.3 96C158.2 96 146.5 103.1 141.6 116.1L111.3 192H224V96H171.3zM272 192H445.4L378.2 108C372.2 100.4 362.1 96 353.2 96H272V192zM525.3 400C527 394.1 528 389.6 528 384C528 357.5 506.5 336 480 336C453.5 336 432 357.5 432 384C432 389.6 432.1 394.1 434.7 400C441.3 418.6 459.1 432 480 432C500.9 432 518.7 418.6 525.3 400zM205.3 400C207 394.1 208 389.6 208 384C208 357.5 186.5 336 160 336C133.5 336 112 357.5 112 384C112 389.6 112.1 394.1 114.7 400C121.3 418.6 139.1 432 160 432C180.9 432 198.7 418.6 205.3 400z"/>
+            </svg>
+            <div class="car-lights"></div>
+        </div>
+        
+        <div class="relative z-10 flex flex-col justify-center items-center h-full text-white px-4 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 max-w-4xl">行人地獄真的改善了嗎？</h1>
+            <p class="text-xl md:text-2xl max-w-3xl mb-4">修法一年半後的台北數據檢驗</p>
+            <p class="text-base md:text-lg mb-8">114/06/09</p>
+            <div class="flex flex-col md:flex-row gap-2 md:gap-8 mb-8 text-sm md:text-base">
+                <p>法律系賴法組 賴千萱</p>
+                <p>工管系科管組 歐玉瑩</p>
+                <p>師大社教系 羅十一</p>
+            </div>
+            <a href="#content" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full transition duration-300 text-lg">
+                閱讀報導
+            </a>
+        </div>
+    </div>
+
+    <!-- 導航欄 -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="#" class="text-red-600 font-bold text-xl">交通大小事</a>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#" class="text-gray-700 hover:text-red-600">首頁</a>
+                    <a href="#" class="text-gray-700 hover:text-red-600">即時路況</a>
+                    <a href="#" class="text-gray-700 hover:text-red-600">交通事故</a>
+                    <a href="#" class="text-gray-700 hover:text-red-600">特別報導</a>
+                    <a href="#" class="text-gray-700 hover:text-red-600">關於我們</a>
+                </div>
+                <div class="md:hidden flex items-center">
+                    <button class="text-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main id="content" class="max-w-5xl mx-auto px-4 py-12">
+        <article class="bg-white shadow-md rounded-lg overflow-hidden">
+            <!-- 文章內容 -->
+            <div class="p-8">
+                <p class="text-lg mb-8 indent-8">
+                    新北市三重區日前一輛小客車失控暴衝，釀成1名女騎士與2名三重國中女學生不幸身亡、12人輕重傷，相隔兩三週內，台灣各地也陸續發生行人交通事故的憾事，頻傳的事故不禁引發質疑：「行人地獄真的改善了嗎？」
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    立法院於112年4月14日三讀通過「道路交通管理處罰條例」修正案，針對汽機車行近行人穿越道不停讓行人的行為，自6月30日起最高罰鍰提高至6,000元，並記違規點數3點，同時須接受道安講習3小時。這項被稱為「行人地獄」修法的政策，至今已實施一年半，究竟成效如何？
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    透過分析台北市A1與A2交通事故資料，以下分別從事故數量變化、發生區域分布，以及高風險族群特徵三面向，檢視行人修法在台北市的實際成效。
+                </p>
+
+                <h2 class="text-2xl font-bold mb-6">肇事者為行人比例明顯下降，修法初期有顯著改善</h2>
+                
+                <div class="mb-8 flex justify-center">
+                    <img src="images/image4.jpg" alt="台北市行人肇事比例變化圖" class="max-w-full h-auto rounded-lg shadow-md">
+                    <p class="text-sm text-gray-500 mt-2 text-center">裝圖：歐玉瑩｜資料來源：111-113年A1與A2傷亡交通事故資料</p>
+                </div>
+                
+                <p class="text-lg mb-8 indent-8">
+                    從台北市行人事故數據抓出肇事人肇因所佔比例可發現，在修法前（約第1期至第11期），肇事人肇因普遍高於平均值（如圖中黑色虛線所示，約為63%），甚至多次超過75%。這顯示過去大多數行人事故的肇因主要來自肇事人。
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    然而，自修法實施後（從第12期左右開始），比例明顯出現下降趨勢，多數時間落在平均值以下，尤其在第13期前半段最低甚至接近50%。雖然在第14期左右又有小幅上升，但整體波動相較修法前趨於穩定，且未再頻繁出現極高肇因比例。
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    這樣的變化初步顯示：修法對於改善行人事故中肇事人肇因的比例有正面影響。尤其在修法初期，肇事人肇因比例有顯著下滑，代表法規可能對肇事行為產生警示與約束作用。
+                </p>
+                
+                <p class="text-lg mb-6">不過，仍可觀察到在後期數據中，肇事人肇因比例有逐漸回升的傾向，這可能表示：</p>
+                
+                <ol class="list-decimal pl-12 mb-8 space-y-2">
+                    <li>法規效果隨時間遞減，肇事人逐漸回到舊有肇事習慣；</li>
+                    <li>執法力道或宣導強度減弱；</li>
+                    <li>行人行為改變或交通環境其他變因影響肇因判定。</li>
+                </ol>
+                
+                <p class="text-lg mb-8 indent-8">
+                    因此，雖可初步肯定修法在短期內對肇事行為有積極影響，但若要持續改善行人安全，仍需配合 持續監督執法、交通教育與環境優化，以鞏固修法成效，避免回到過往高比例肇事肇因的情況。
+                </p>
+                
+                <div class="mb-8 flex justify-center">
+                    <img src="images/image2.jpg" alt="台北市行人肇事比例變化圖" class="max-w-full h-auto rounded-lg shadow-md">
+                    <p class="text-sm text-gray-500 mt-2 text-center">裝圖：歐玉瑩｜資料來源：111-113年A1與A2傷亡交通事故資料</p>
+                </div>
+
+                <h2 class="text-2xl font-bold mb-6">台北市行人事故風險地圖揭示核心風險帶，政策效果呈現空間差異</h2>
+                
+                <p class="text-lg mb-8 indent-8">
+                    為檢視《道路交通管理處罰條例》修法後的政策效果，本圖呈現台北市12個行政區中，行人事故在整體交通事故中所佔比例的變化百分比。相較於單純比較行人或整體事故數量的變化，此圖更聚焦於"相對風險"——即行人在交通事故中所處的位置是否變得更安全。
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    從地圖可觀察到一條由大同、大安、萬華構成的「核心風險帶」，顯示修法後這些區域中行人佔比不減反增，形成顯著的風險上升區域。相對地，南港、中山、士林、內湖等區則呈現行人風險下降的趨勢，與其地理位置（如郊區性或住宅區性質）或產業分布可能有所關聯。
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    整體而言，多數行政區的變化仍集中在±1%以內，顯示修法雖有初步效果，但尚未深層改變交通結構與行人風險分布。這反映出台北市各行政區在空間規劃、道路設計與執法強度等層面的治理仍有明顯差異，未來若要進一步降低行人風險，仍需透過更細緻的區域對策與空間性介入。
+                </p>
+                
+                <div class="mb-8 flex justify-center">
+                    <img src="images/image5.png" alt="台北市行人事故風險地圖" class="max-w-full h-auto rounded-lg shadow-md">
+                    <p class="text-sm text-gray-500 mt-2 text-center">裝圖：賴千瑱｜資料來源：111-113年A1與A2傷亡交通事故資料、台北市人口資料</p>
+                </div>
+
+                <h2 class="text-2xl font-bold mb-6">交叉路口事故仍占大宗，行人穿越道風險升高</h2>
+                
+                <p class="text-lg mb-8 indent-8">
+                    從事故位置類型來看，交叉路口內與一般車道依然是最主要的事故發生地點，政策前後分別佔比約為36%與38%、30%與31%，變化幅度有限，顯示結構性的道路風險仍未根本改善。
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    值得警覺的是，與行人直接相關的事故地點出現上升趨勢。行人穿越道的事故比例由政策前的1.9%升至政策後的5.2%，顯示即便行人事故總數在部分區域下降，但穿越道路時的風險反而加劇。同時，在人行道與機車專用道等空間的事故比例也未見明顯改善，甚至略有上升，反映行人與機車在界限空間中的衝突依然存在。
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    整體而言，圖表揭示了台北市事故熱點的「類型固著現象」：傳統高風險區如交叉口與無分隔道路仍為事故集中地，而政策雖著眼於提升行人安全，但從結果來看，實際落實與空間設計可能仍有待強化，尤其在人行優先空間的保障與動線整合上。
+                </p>
+                
+                <div class="mb-8 flex justify-center">
+                    <img src="images/image3.png" alt="事故位置類型分布" class="max-w-full h-auto rounded-lg shadow-md">
+                    <p class="text-sm text-gray-500 mt-2 text-center">裝圖：賴千瑱｜資料來源：111-113年A1與A2傷亡交通事故資料</p>
+                </div>
+
+                <h2 class="text-2xl font-bold mb-6">男性肇事率持續偏高，中高齡族群改善有限</h2>
+                
+                <p class="text-lg mb-8 indent-8">
+                    112年行人法案實際上路後，肇事肇事率出現明顯改善，比較113年與112年行人事故中肇事主因為肇事人的案件，這些高風險肇事的年齡與性別變化。從性別方面觀察，男性肇事的事故率皆明顯高於女性，各年齡層中男性肇事率約為女性的3-6倍，性別差異在修法後持續存在，並未縮小。
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    修法後不同年齡層的改善程度呈現顯著差異，20-29歲族群為所有年齡層中改善最顯著的群體，降幅達27%；中高齡肇事改善相對有限，50至59歲肇事降幅15%，60至69歲者僅降8%，反映年齡越高對法規調整的適應性越受限制。
+                </p>
+                
+                <p class="text-lg mb-8 indent-8">
+                    綜觀而言，行人事故中的高風險肇事世代差異值得關注，年齡差異的行為調整能力決定肇事率改善程度。此外，男性肇事持續偏高的事故風險，顯示交通安全需要思考如何針對男性制定其他的法規策略。
+                </p>
+                
+                <div class="mb-8 flex justify-center">
+                    <img src="images/image1.png" alt="不同年齡與性別肇事率比較" class="max-w-full h-auto rounded-lg shadow-md">
+                    <p class="text-sm text-gray-500 mt-2 text-center">裝圖：羅十一｜資料來源：112-113年A1與A2傷亡交通事故資料、台北市人口資料</p>
+                </div>
+
+                <h2 class="text-2xl font-bold mb-6">結語：短期震撼有效，長期治理待加強</h2>
+                
+                <p class="text-lg mb-8 indent-8">
+                    歷經一年半觀察，修法政策呈現「雷聲大雨點小」現象。新法上路兩個月內確實產生遏阻效果，未停讓行人事故比例創三年來最低；但隨時間推移，改善幅度微乎其微，113年末甚至出現回升。另外，人口集中區的行人事故占比不降反升、男性肇事肇事率持續遠高於女性，顯示結構性問題依然存在。僅靠提高罰則無法告別「行人地獄」現況，或需考量時間效應、空間分布、族群差異等面向，制定系統性的綜合策略。
+                </p>
+            </div>
+        </article>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="grid md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">交通大小事</h3>
+                    <p class="text-gray-400 mb-4">
+                        提供最即時、最準確的交通資訊，幫助您規劃最佳行程。
+                    </p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <span class="sr-only">Facebook</span>
+                            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <span class="sr-only">Instagram</span>
+                            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <span class="sr-only">Twitter</span>
+                            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">快速連結</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white">首頁</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">即時路況</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">交通事故</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">特別報導</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">關於我們</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">聯絡我們</h3>
+                    <address class="not-italic text-gray-400">
+                        <p class="mb-2">台北市信義區市府路45號</p>
+                        <p class="mb-2">電話：(02) 2345-6789</p>
+                        <p class="mb-2">Email：info@traffic-news.tw</p>
+                    </address>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400 text-sm">
+                <p>&copy; 2025 交通大小事 版權所有</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 汽車視差捲動效果
+        const car = document.getElementById('car');
+        const windowWidth = window.innerWidth;
+        let lastScrollY = 0;
+        let carPosition = -150;
+        
+        // 根據捲動更新汽車位置
+        function updateCarPosition() {
+            const scrollY = window.scrollY;
+            const scrollDiff = scrollY - lastScrollY;
+            
+            // 只有當頁面向下捲動時才移動汽車
+            if (scrollY < window.innerHeight) {
+                // 計算新的汽車位置，乘上一個係數使移動更明顯
+                carPosition += scrollDiff * 0.8;
+                
+                // 限制汽車位置在畫面範圍內
+                carPosition = Math.min(carPosition, windowWidth + 150);
+                
+                // 更新汽車位置
+                car.style.left = `${carPosition}px`;
+            }
+            
+            lastScrollY = scrollY;
+        }
+        
+        // 監聽捲動事件
+        window.addEventListener('scroll', updateCarPosition);
+        
+        // 初始化汽車位置
+        window.addEventListener('load', () => {
+            car.style.left = `${carPosition}px`;
+        });
+    </script>
+</body>
+</html>

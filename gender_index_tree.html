@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性別統計資料庫索引樹狀圖</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .search-container {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .search-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .tree-container {
+            padding: 30px;
+            max-height: 75vh;
+            overflow-y: auto;
+            position: relative;
+            z-index: 1;
+            border-radius: 0 0 15px 15px;
+            overflow: hidden;
+        }
+
+        .tree {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+        }
+
+        .tree-node {
+            margin: 2px 0;
+            position: relative;
+        }
+
+        .tree-content {
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: white;
+            border: 2px solid transparent;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+
+        .tree-content:hover {
+            background: rgba(79, 172, 254, 0.1);
+            transform: translateX(3px);
+            border-color: #4facfe;
+        }
+
+        .tree-toggle {
+            width: 16px;
+            height: 16px;
+            margin-right: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #4facfe;
+            color: white;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tree-toggle:hover {
+            background: #357abd;
+            transform: scale(1.1);
+        }
+
+        .tree-toggle.collapsed::before {
+            content: '▶';
+        }
+
+        .tree-toggle.expanded::before {
+            content: '▼';
+        }
+
+        .tree-label {
+            flex: 1;
+            font-size: 13px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .tree-label a {
+            color: #4facfe;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .tree-label a:hover {
+            color: #357abd;
+            text-decoration: underline;
+        }
+
+        .tree-children {
+            margin-left: 25px;
+            position: relative;
+            display: none;
+        }
+
+        .tree-children.expanded {
+            display: block;
+        }
+
+        /* 心智圖風格的連接線 */
+        .tree-children::before {
+            content: '';
+            position: absolute;
+            left: -15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #4facfe, #e9ecef);
+            border-radius: 1px;
+        }
+
+        .tree-node:not(:last-child) .tree-children::before {
+            bottom: -10px;
+        }
+
+        /* 水平連接線 */
+        .tree-content::before {
+            content: '';
+            position: absolute;
+            left: -15px;
+            top: 50%;
+            width: 15px;
+            height: 2px;
+            background: #4facfe;
+            transform: translateY(-50%);
+            border-radius: 1px;
+        }
+
+        /* 第一層節點不需要水平連接線 */
+        .tree-node:first-child .tree-content::before {
+            display: none;
+        }
+
+        /* 為不同層級添加不同的顏色 */
+        .tree-children .tree-children .tree-content::before {
+            background: #f093fb;
+        }
+
+        .tree-children .tree-children .tree-children::before {
+            background: linear-gradient(to bottom, #f093fb, #e9ecef);
+        }
+
+        .tree-children .tree-children .tree-children .tree-content::before {
+            background: #00f2fe;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 999999;
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(5px);
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+            visibility: visible;
+        }
+
+        .tooltip-row {
+            margin: 4px 0;
+            display: flex;
+            gap: 8px;
+        }
+
+        .tooltip-label {
+            font-weight: bold;
+            color: #4facfe;
+            min-width: 80px;
+        }
+
+        .tooltip-value {
+            color: #fff;
+        }
+
+        .stats {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            text-align: center;
+            color: #666;
+        }
+
+        .highlight {
+            background: #ffeb3b;
+            color: #000;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+            
+            .tree-children {
+                margin-left: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>性別統計資料庫索引</h1>
+            <p>Gender Statistics Database Index - Interactive Tree Visualization</p>
+        </div>
+
+        <div class="search-container">
+            <div class="search-box">
+                <input type="text" id="searchInput" class="search-input" placeholder="輸入關鍵字搜尋資料庫名稱、分類、部門等...">
+                <button onclick="performSearch()" class="search-btn">搜尋</button>
+            </div>
+        </div>
+
+        <div class="tree-container">
+            <div id="treeContainer" class="tree"></div>
+        </div>
+
+        <div class="stats">
+            <div id="statsInfo">載入中...</div>
+        </div>
+    </div>
+
+    <script>
+        let treeData = [];
+        let originalTreeData = [];
+        let searchResults = [];
+
+        // 載入CSV資料
+        async function loadData() {
+            try {
+                const response = await fetch('gender_index.csv');
+                const csvText = await response.text();
+                const lines = csvText.split('\n');
+                const headers = lines[0].split(',');
+                
+                // 解析CSV資料
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim()) {
+                        const values = parseCSVLine(lines[i]);
+                        if (values.length >= 8) {
+                            const row = {
+                                cat1: values[1] || '',
+                                cat2: values[2] || '',
+                                name: values[3] || '',
+                                dataRange: values[4] || '',
+                                creator: values[5] || '',
+                                href: values[6] || '',
+                                department: values[7] || '',
+                                date: values[8] || '',
+                                type: values[9] || '',
+                                subCategory: values[10] || ''
+                            };
+                            treeData.push(row);
+                        }
+                    }
+                }
+                
+                originalTreeData = [...treeData];
+                buildTree();
+                updateStats();
+            } catch (error) {
+                console.error('載入資料時發生錯誤:', error);
+                document.getElementById('treeContainer').innerHTML = 
+                    '<div class="no-results">無法載入資料，請確認 gender_index.csv 檔案是否存在</div>';
+            }
+        }
+
+        // 解析CSV行（處理包含逗號的欄位）
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current.trim());
+            return result;
+        }
+
+        // 建立樹狀結構
+        function buildTree() {
+            const treeContainer = document.getElementById('treeContainer');
+            treeContainer.innerHTML = '';
+
+            // 按cat1分組
+            const cat1Groups = {};
+            treeData.forEach(item => {
+                if (!cat1Groups[item.cat1]) {
+                    cat1Groups[item.cat1] = {};
+                }
+                if (!cat1Groups[item.cat1][item.cat2]) {
+                    cat1Groups[item.cat1][item.cat2] = [];
+                }
+                cat1Groups[item.cat1][item.cat2].push(item);
+            });
+
+            // 建立樹狀HTML
+            Object.keys(cat1Groups).forEach(cat1 => {
+                const cat1Node = createTreeNode(cat1, 'cat1', true);
+                const cat1Children = document.createElement('div');
+                cat1Children.className = 'tree-children';
+
+                Object.keys(cat1Groups[cat1]).forEach(cat2 => {
+                    const cat2Node = createTreeNode(cat2, 'cat2', true);
+                    const cat2Children = document.createElement('div');
+                    cat2Children.className = 'tree-children';
+
+                    cat1Groups[cat1][cat2].forEach(dataset => {
+                        const datasetNode = createDatasetNode(dataset);
+                        cat2Children.appendChild(datasetNode);
+                    });
+
+                    cat2Node.appendChild(cat2Children);
+                    cat1Children.appendChild(cat2Node);
+                });
+
+                cat1Node.appendChild(cat1Children);
+                treeContainer.appendChild(cat1Node);
+            });
+        }
+
+        // 建立樹節點
+        function createTreeNode(label, type, hasChildren) {
+            const node = document.createElement('div');
+            node.className = 'tree-node';
+
+            const content = document.createElement('div');
+            content.className = 'tree-content';
+
+            if (hasChildren) {
+                const toggle = document.createElement('span');
+                toggle.className = 'tree-toggle collapsed';
+                toggle.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleNode(toggle, content.nextElementSibling);
+                };
+                content.appendChild(toggle);
+                
+                // 添加點擊文字展開功能
+                content.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleNode(toggle, content.nextElementSibling);
+                };
+            }
+
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'tree-label';
+            labelSpan.innerHTML = label;
+            content.appendChild(labelSpan);
+
+            node.appendChild(content);
+            return node;
+        }
+
+        // 建立資料集節點
+        function createDatasetNode(dataset) {
+            const node = document.createElement('div');
+            node.className = 'tree-node';
+
+            const content = document.createElement('div');
+            content.className = 'tree-content';
+
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'tree-label';
+            
+            if (dataset.href) {
+                const link = document.createElement('a');
+                link.href = dataset.href;
+                link.target = '_blank';
+                link.innerHTML = dataset.name;
+                labelSpan.appendChild(link);
+            } else {
+                labelSpan.innerHTML = dataset.name;
+            }
+            
+            content.appendChild(labelSpan);
+
+            // 添加工具提示
+            const tooltip = createTooltip(dataset);
+            document.body.appendChild(tooltip);
+
+            content.onmouseenter = (e) => {
+                e.stopPropagation();
+                showTooltip(tooltip, e);
+            };
+            content.onmouseleave = (e) => {
+                e.stopPropagation();
+                hideTooltip(tooltip);
+            };
+
+            node.appendChild(content);
+            return node;
+        }
+
+        // 建立工具提示
+        function createTooltip(dataset) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            
+            const metadata = [
+                { label: '資料範圍', value: dataset.dataRange },
+                { label: '繪製者', value: dataset.creator },
+                { label: '部門', value: dataset.department },
+                { label: '日期', value: dataset.date },
+                { label: '類型', value: dataset.type },
+                { label: '複分類', value: dataset.subCategory }
+            ];
+
+            metadata.forEach(item => {
+                if (item.value && item.value.trim() !== '') {
+                    const row = document.createElement('div');
+                    row.className = 'tooltip-row';
+                    
+                    const label = document.createElement('span');
+                    label.className = 'tooltip-label';
+                    label.textContent = item.label + ':';
+                    
+                    const value = document.createElement('span');
+                    value.className = 'tooltip-value';
+                    value.textContent = item.value;
+                    
+                    row.appendChild(label);
+                    row.appendChild(value);
+                    tooltip.appendChild(row);
+                }
+            });
+
+            // 如果沒有資料，至少顯示資料庫名稱
+            if (tooltip.children.length === 0) {
+                const row = document.createElement('div');
+                row.className = 'tooltip-row';
+                row.innerHTML = `<span class="tooltip-value">${dataset.name}</span>`;
+                tooltip.appendChild(row);
+            }
+
+            return tooltip;
+        }
+
+        // 顯示工具提示
+        function showTooltip(tooltip, event) {
+            // 設定位置
+            let left = event.clientX + 10;
+            let top = event.clientY - 10;
+            
+            // 確保 tooltip 在視窗內
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            // 先顯示 tooltip 以計算尺寸
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.style.visibility = 'visible';
+            tooltip.classList.add('show');
+            
+            // 調整位置避免超出邊界
+            setTimeout(() => {
+                const rect = tooltip.getBoundingClientRect();
+                
+                if (rect.right > viewportWidth - 20) {
+                    left = event.clientX - rect.width - 10;
+                }
+                
+                if (rect.bottom > viewportHeight - 20) {
+                    top = event.clientY - rect.height - 10;
+                }
+                
+                left = Math.max(10, left);
+                top = Math.max(10, top);
+                
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+            }, 0);
+        }
+
+        // 隱藏工具提示
+        function hideTooltip(tooltip) {
+            tooltip.classList.remove('show');
+            // 延遲隱藏以確保動畫完成
+            setTimeout(() => {
+                if (!tooltip.classList.contains('show')) {
+                    tooltip.style.visibility = 'hidden';
+                }
+            }, 300);
+        }
+
+        // 切換節點展開/收合
+        function toggleNode(toggle, children) {
+            if (children.classList.contains('expanded')) {
+                children.classList.remove('expanded');
+                toggle.classList.remove('expanded');
+                toggle.classList.add('collapsed');
+            } else {
+                children.classList.add('expanded');
+                toggle.classList.remove('collapsed');
+                toggle.classList.add('expanded');
+            }
+        }
+
+        // 搜尋功能
+        function performSearch() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                treeData = [...originalTreeData];
+                searchResults = [];
+                buildTree();
+                updateStats();
+                return;
+            }
+
+            // 搜尋符合的資料
+            searchResults = originalTreeData.filter(item => 
+                item.name.toLowerCase().includes(searchTerm) ||
+                item.cat1.toLowerCase().includes(searchTerm) ||
+                item.cat2.toLowerCase().includes(searchTerm) ||
+                item.department.toLowerCase().includes(searchTerm) ||
+                item.creator.toLowerCase().includes(searchTerm) ||
+                item.type.toLowerCase().includes(searchTerm)
+            );
+
+            // 高亮搜尋結果
+            treeData = searchResults.map(item => ({
+                ...item,
+                name: highlightText(item.name, searchTerm),
+                cat1: highlightText(item.cat1, searchTerm),
+                cat2: highlightText(item.cat2, searchTerm)
+            }));
+
+            buildTree();
+            expandSearchResults();
+            updateStats();
+        }
+
+        // 高亮搜尋文字
+        function highlightText(text, searchTerm) {
+            if (!searchTerm) return text;
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        // 展開搜尋結果
+        function expandSearchResults() {
+            if (searchResults.length > 0) {
+                const toggles = document.querySelectorAll('.tree-toggle');
+                const children = document.querySelectorAll('.tree-children');
+                
+                toggles.forEach(toggle => {
+                    toggle.classList.remove('collapsed');
+                    toggle.classList.add('expanded');
+                });
+                
+                children.forEach(child => {
+                    child.classList.add('expanded');
+                });
+            }
+        }
+
+        // 更新統計資訊
+        function updateStats() {
+            const statsInfo = document.getElementById('statsInfo');
+            const totalDatasets = originalTreeData.length;
+            const displayedDatasets = treeData.length;
+            
+            if (searchResults.length > 0) {
+                statsInfo.innerHTML = `
+                    總資料庫數量: ${totalDatasets} | 
+                    搜尋結果: ${displayedDatasets} 筆 | 
+                    搜尋關鍵字: "${document.getElementById('searchInput').value}"
+                `;
+            } else {
+                statsInfo.innerHTML = `總資料庫數量: ${totalDatasets} 筆`;
+            }
+        }
+
+        // 即時搜尋支援
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            performSearch();
+        });
+
+        // 鍵盤搜尋支援
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // 頁面載入時執行
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html> 

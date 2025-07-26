@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Read JSON with D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>JSON Data</h1>
+    <div id="output"></div>
+
+    <script>
+        // JSON URL (local file)
+        const url = "data/地方檢察署家庭暴力案件-聲請羈押後法院裁定情形.json";
+
+        // Fetch JSON data using D3.js
+        d3.json(url).then(data => {
+            console.log(data); // Log the data to the console for debugging
+
+            // Create a table
+            const table = d3.select("#output").append("table").attr("border", 1);
+            const thead = table.append("thead");
+            const tbody = table.append("tbody");
+
+            // Define table headers
+            const headers = ["Category1Title", "Category2Title", "Category3Title", "Category4Title", "Category5Title", "Period", "Val"];
+            thead.append("tr")
+                .selectAll("th")
+                .data(headers)
+                .enter()
+                .append("th")
+                .text(d => d);
+
+            // Populate table rows
+            const rows = tbody.selectAll("tr")
+                .data(data)
+                .enter()
+                .append("tr");
+
+            rows.selectAll("td")
+                .data(row => headers.map(header => row[header]))
+                .enter()
+                .append("td")
+                .text(d => d);
+        }).catch(error => {
+            console.error("Error fetching JSON data:", error);
+        });
+    </script>
+</body>
+</html>
