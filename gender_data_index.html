@@ -563,105 +563,7 @@
                 category: "social",
                 description: "新聞相關的性別資料分析"
             },
-            {
-                id: "r12342019_黃郁淳2",
-                studentName: "黃郁淳",
-                studentId: "r12342019",
-                title: "家庭暴力類型與性別分布分析",
-                filename: "r12342019#_黃郁淳 (HUANG, YU-CHUN)_189579_7618659_dom_vio_type.json",
-                category: "gender-violence",
-                description: "分析不同類型家庭暴力的性別分布"
-            },
-            {
-                id: "r12342009_黃馨慧2",
-                studentName: "黃馨慧",
-                studentId: "r12342009",
-                title: "身心障礙人口性別比例地圖分析",
-                filename: "r12342009#_黃馨慧 (XING-HUI HUANG)_193506_7619684_AS06_gender_ratio_map.html",
-                category: "health",
-                description: "以地圖形式分析身心障礙人口的性別比例"
-            },
-            {
-                id: "r13227109_王瀚逸2",
-                studentName: "王瀚逸",
-                studentId: "r13227109",
-                title: "性別資料視覺化分析作業",
-                filename: "r13227109#_王瀚逸 (WANG, HAN-YI)_216363_7592029_R13227109_AS06 Gender Data Visualization.Rmd",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13322003_陳廷瑄2",
-                studentName: "陳廷瑄",
-                studentId: "r13322003",
-                title: "性別資料視覺化分析作業",
-                filename: "r13322003#_陳廷瑄 (CHEN, TING-SYUAN)_230073_7596226_AS06_Gender Data Visualization_R13322003.Rmd",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342001_高子婷2",
-                studentName: "高子婷",
-                studentId: "r13342001",
-                title: "性別資料視覺化分析作業",
-                filename: "r13342001#_高子婷 (KAO, TZU-TING)_228161_7583878_0506.Rmd",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342002_張玳瑋2",
-                studentName: "張玳瑋",
-                studentId: "r13342002",
-                title: "性別資料視覺化分析作業",
-                filename: "r13342002#_張玳瑋 (CHANG, TAI-WEI)_228162_7624173_AS06_R13342002張玳瑋.Rmd",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342006_林婕宇2",
-                studentName: "林婕宇",
-                studentId: "r13342006",
-                title: "性別資料視覺化分析作業",
-                filename: "r13342006#_林婕宇 (LIN, CHIEH-YU)_228165_7619891_AS06.Rmd",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342008_奚子翔2",
-                studentName: "奚子翔",
-                studentId: "r13342008",
-                title: "性別資料視覺化分析作業",
-                filename: "r13342008#_奚子翔 (HSI, TZU-HSIANG)_223336_7617509_AS06.Rmd",
-                category: "gender-violence",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342009_柯采瑜2",
-                studentName: "柯采瑜",
-                studentId: "r13342009",
-                title: "性別資料視覺化分析作業",
-                filename: "r13342009#_柯采瑜 (KE,CAI-YU)_228166_7621913_AS06＿Claire.Rmd",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342018_文嘉翎2",
-                studentName: "文嘉翎",
-                studentId: "r13342018",
-                title: "性別資料視覺化分析作業",
-                filename: "r13342018#_文嘉翎 (WEN, CHIA-LING)_228168_7615562_R13342018 文嘉翎AS06. Gender Data Visualization.Rmd",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342032_黃俐珏2",
-                studentName: "黃俐珏",
-                studentId: "r13342032",
-                title: "性別資料視覺化分析作業",
-                filename: "r13342032#_黃俐珏 (HUANG, LI-CHUEH)_244306_7619075_gender-1.Rmd",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            }
+
         ];
 
         // 渲染統計資料
@@ -732,7 +634,9 @@
 
         // 開啟作業
         function openAssignment(filename) {
-            window.open(`gender_data/${filename}`, '_blank');
+            // 確保檔案名稱正確編碼
+            const encodedFilename = encodeURIComponent(filename);
+            window.open(`gender_data/${encodedFilename}`, '_blank');
         }
 
         // 搜尋功能
