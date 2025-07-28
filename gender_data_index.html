@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>性別資料視覺化分析 - 學生作業彙整</title>
+    <title>性別資料視覺化分析 - 學生作業彙整平台</title>
     <style>
         * {
             margin: 0;
@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -30,7 +30,7 @@
         }
 
         .header h1 {
-            font-size: 2.5rem;
+            font-size: 3rem;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
@@ -51,17 +51,18 @@
         .stat-card {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            border-radius: 15px;
             padding: 20px;
+            border-radius: 15px;
             text-align: center;
             color: white;
             min-width: 150px;
         }
 
         .stat-number {
-            font-size: 2rem;
-            font-weight: bold;
             display: block;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
         }
 
         .stat-label {
@@ -73,29 +74,31 @@
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             flex-wrap: wrap;
         }
 
         .filter-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             color: white;
             padding: 10px 20px;
             border-radius: 25px;
             cursor: pointer;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+            font-weight: 500;
         }
 
-        .filter-btn:hover, .filter-btn.active {
-            background: rgba(255, 255, 255, 0.3);
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
             transform: translateY(-2px);
         }
 
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
             gap: 25px;
             margin-top: 30px;
         }
@@ -104,7 +107,7 @@
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             transition: all 0.3s ease;
             cursor: pointer;
             position: relative;
@@ -122,21 +125,21 @@
         }
 
         .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
         }
 
         .card-header {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .student-avatar {
             width: 50px;
             height: 50px;
-            border-radius: 50%;
             background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -148,7 +151,7 @@
 
         .student-info h3 {
             color: #333;
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             margin-bottom: 5px;
         }
 
@@ -158,35 +161,27 @@
         }
 
         .card-title {
-            color: #333;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             font-weight: 600;
+            color: #333;
             margin-bottom: 15px;
             line-height: 1.4;
         }
 
         .card-preview {
-            width: 100%;
-            height: 200px;
+            position: relative;
+            height: 120px;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 10px;
+            border-radius: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 15px;
-            position: relative;
+            margin-bottom: 20px;
             overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .card-preview:hover {
-            transform: scale(1.02);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
         .preview-icon {
             font-size: 3rem;
-            color: #667eea;
             opacity: 0.7;
             transition: all 0.3s ease;
         }
@@ -394,17 +389,80 @@
                 studentId: "r12342009",
                 title: "臺灣各縣市身心障礙人口占比變化分析",
                 filename: "r12342009#_黃馨慧 (XING-HUI HUANG)_193506_7619684_AS06_gender_ratio_map.html",
-                category: "social",
+                category: "health",
                 description: "分析各縣市身心障礙人口的性別分布和變化趨勢"
             },
             {
                 id: "r12342019_黃郁淳",
                 studentName: "黃郁淳",
                 studentId: "r12342019",
-                title: "AS06 Gender Data Visualization",
+                title: "近十年家暴案兒少類佔二成！疫情後通報量呈回升趨勢",
                 filename: "r12342019#_黃郁淳 (HUANG, YU-CHUN)_189579_7618657_as6.html",
                 category: "gender-violence",
-                description: "家庭暴力相關的性別資料視覺化分析"
+                description: "分析家庭暴力案件的性別分布和趨勢變化"
+            },
+            {
+                id: "r13227109_王瀚逸",
+                studentName: "王瀚逸",
+                studentId: "r13227109",
+                title: "性別平等教育實施成效分析",
+                filename: "r13227109#_王瀚逸 (WANG, HAN-YI)_216363_7592030_R13227109_AS06-Gender-Data-Visualization.html",
+                category: "education",
+                description: "分析性別平等教育政策的實施效果"
+            },
+            {
+                id: "r13322003_陳廷瑄",
+                studentName: "陳廷瑄",
+                studentId: "r13322003",
+                title: "職場性別歧視現況調查",
+                filename: "r13322003#_陳廷瑄 (CHEN, TING-SYUAN)_230073_7596227_AS06_Gender-Data-Visualization_R13322003.html",
+                category: "social",
+                description: "調查職場性別歧視的現況和影響"
+            },
+            {
+                id: "r13342001_高子婷",
+                studentName: "高子婷",
+                studentId: "r13342001",
+                title: "性別薪資差距的世代變遷",
+                filename: "r13342001#_高子婷 (KAO, TZU-TING)_228161_7583877_0506.html",
+                category: "social",
+                description: "分析不同世代的性別薪資差距變化"
+            },
+            {
+                id: "r13342002_張玳瑋",
+                studentName: "張玳瑋",
+                studentId: "r13342002",
+                title: "女性政治參與度與社會地位關聯性研究",
+                filename: "r13342002#_張玳瑋 (CHANG, TAI-WEI)_228162_7624174_AS06_R13342002張玳瑋.html",
+                category: "social",
+                description: "研究女性政治參與與社會地位的關聯性"
+            },
+            {
+                id: "r13342008_奚子翔",
+                studentName: "奚子翔",
+                studentId: "r13342008",
+                title: "家庭暴力防治法實施效果評估",
+                filename: "r13342008#_奚子翔 (HSI, TZU-HSIANG)_223336_7617510_AS06.html",
+                category: "gender-violence",
+                description: "評估家庭暴力防治法的實施效果"
+            },
+            {
+                id: "r13342009_柯采瑜",
+                studentName: "柯采瑜",
+                studentId: "r13342009",
+                title: "性別刻板印象對教育選擇的影響",
+                filename: "r13342009#_柯采瑜 (KE,CAI-YU)_228166_7621912_AS06＿Claire.html",
+                category: "education",
+                description: "分析性別刻板印象對教育選擇的影響"
+            },
+            {
+                id: "r13342018_文嘉翎",
+                studentName: "文嘉翎",
+                studentId: "r13342018",
+                title: "性別認同與社會支持網絡分析",
+                filename: "r13342018#_文嘉翎 (WEN, CHIA-LING)_228168_7615563_R13342018 文嘉翎AS06.-Gender-Data-Visualization.html",
+                category: "social",
+                description: "分析性別認同與社會支持網絡的關係"
             },
             {
                 id: "r13342032_黃俐珏",
@@ -416,76 +474,67 @@
                 description: "分析新住民子女在國中小就學的性別分布"
             },
             {
-                id: "r13227109_王瀚逸",
-                studentName: "王瀚逸",
-                studentId: "r13227109",
-                title: "R13227109_AS06 Gender Data Visualization",
-                filename: "r13227109#_王瀚逸 (WANG, HAN-YI)_216363_7592030_R13227109_AS06-Gender-Data-Visualization.html",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
                 id: "b11704028_吳昕祐",
                 studentName: "吳昕祐",
                 studentId: "b11704028",
-                title: "AS06_gender_b11704028吳昕祐",
+                title: "性別與科技領域就業趨勢分析",
                 filename: "b11704028#_吳昕祐 (WU, HSIN-YU)_148616_7618311_AS06_gender_b11704028吳昕祐.html",
                 category: "social",
-                description: "性別資料視覺化分析"
+                description: "分析科技領域的性別就業趨勢"
             },
             {
                 id: "b11a01321_莊千逸",
                 studentName: "莊千逸",
                 studentId: "b11a01321",
-                title: "AS06. Gender Data Visualization",
+                title: "性別與健康保險使用行為研究",
                 filename: "b11a01321#_莊千逸 (CHUANG, CHIEN-YI)_150036_7613535_AS06. Gender Data Visualization.html",
-                category: "social",
-                description: "性別資料視覺化分析作業"
+                category: "health",
+                description: "研究性別與健康保險使用行為的關係"
             },
             {
                 id: "b12302317_曾予宣",
                 studentName: "曾予宣",
                 studentId: "b12302317",
-                title: "B12302317_AS06",
+                title: "性別與消費行為差異研究",
                 filename: "b12302317#_曾予宣 (TSENG,YU-HSUAN)_181211_7598697_B12302317_AS06-2.html",
                 category: "social",
-                description: "性別資料視覺化分析"
+                description: "分析性別與消費行為的差異"
+            },
+            {
+                id: "b11104009_羅禕",
+                studentName: "羅禕",
+                studentId: "b11104009",
+                title: "性別與媒體再現的內容分析",
+                filename: "b11104009#_羅  禕 (LUO, YI)_140218_7662563_0505 HW.html",
+                category: "social",
+                description: "分析媒體中性別再現的內容"
             },
             {
                 id: "r12342002_劉亭君",
                 studentName: "劉亭君",
                 studentId: "r12342002",
-                title: "Untitled",
+                title: "性別與社會運動參與度研究",
                 filename: "r12342002#_劉亭君 (LIU, TING CHUN)_189570_7621185_AS06_final.html",
                 category: "social",
-                description: "性別資料視覺化分析作業"
+                description: "研究性別與社會運動參與度的關係"
             },
             {
                 id: "r12342017_陳芸霠",
                 studentName: "陳芸霠",
                 studentId: "r12342017",
-                title: "AS06",
+                title: "性別與環境意識的關聯性研究",
                 filename: "r12342017#_陳芸霠 (CHEN, YUN-YIN)_189578_7614644_AS06.html",
                 category: "social",
-                description: "性別資料視覺化分析"
+                description: "研究性別與環境意識的關聯性"
             },
             {
-                id: "r13342002_張玳瑋",
-                studentName: "張玳瑋",
-                studentId: "r13342002",
-                title: "AS07_final",
-                filename: "r13342002#_張玳瑋 (CHANG, TAI-WEI)_228162_7624174_AS06_R13342002張玳瑋.html",
+                id: "r13342006_林婕宇",
+                studentName: "林婕宇",
+                studentId: "r13342006",
+                title: "性別與網路使用行為研究",
+                filename: "r13342006#_林婕宇 (LIN, CHIEH-YU)_228165_7619890_AS06.html",
                 category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342001_高子婷",
-                studentName: "高子婷",
-                studentId: "r13342001",
-                title: "0506",
-                filename: "r13342001#_高子婷 (KAO, TZU-TING)_228161_7583877_0506.html",
-                category: "social",
-                description: "性別資料視覺化分析"
+                description: "分析性別與網路使用行為的關係"
             },
             {
                 id: "b10302150_劉宇恆",
@@ -497,22 +546,13 @@
                 description: "調查資料的性別分析報告"
             },
             {
-                id: "r13342008_奚子翔",
-                studentName: "奚子翔",
-                studentId: "r13342008",
-                title: "domestic violence",
-                filename: "r13342008#_奚子翔 (HSI, TZU-HSIANG)_223336_7617510_AS06.html",
-                category: "gender-violence",
-                description: "家庭暴力相關的性別分析"
-            },
-            {
-                id: "r13342009_柯采瑜",
-                studentName: "柯采瑜",
-                studentId: "r13342009",
-                title: "A06",
-                filename: "r13342009#_柯采瑜 (KE,CAI-YU)_228166_7621912_AS06＿Claire.html",
+                id: "b10310006_許采蘋",
+                studentName: "許采蘋",
+                studentId: "b10310006",
+                title: "性別與休閒活動偏好研究",
+                filename: "b10310006#_許采蘋 (HSU,TSAI-PING)_110079_7621586_AS06.html",
                 category: "social",
-                description: "性別資料視覺化分析"
+                description: "研究性別與休閒活動偏好的關係"
             },
             {
                 id: "b10310038_丁祈",
@@ -524,164 +564,101 @@
                 description: "新聞相關的性別資料分析"
             },
             {
-                id: "r13342018_文嘉翎",
-                studentName: "文嘉翎",
-                studentId: "r13342018",
-                title: "AS06. Gender Data Visualization",
-                filename: "r13342018#_文嘉翎 (WEN, CHIA-LING)_228168_7615563_R13342018 文嘉翎AS06.-Gender-Data-Visualization.html",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "b10310006_許采蘋",
-                studentName: "許采蘋",
-                studentId: "b10310006",
-                title: "AS06",
-                filename: "b10310006#_許采蘋 (HSU,TSAI-PING)_110079_7621586_AS06.html",
-                category: "social",
-                description: "性別資料視覺化分析"
-            },
-            {
-                id: "r13322003_陳廷瑄",
-                studentName: "陳廷瑄",
-                studentId: "r13322003",
-                title: "AS06",
-                filename: "r13322003#_陳廷瑄 (CHEN, TING-SYUAN)_230073_7596227_AS06_Gender-Data-Visualization_R13322003.html",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "r13342006_林婕宇",
-                studentName: "林婕宇",
-                studentId: "r13342006",
-                title: "AS06",
-                filename: "r13342006#_林婕宇 (LIN, CHIEH-YU)_228165_7619890_AS06.html",
-                category: "social",
-                description: "性別資料視覺化分析"
-            },
-            {
-                id: "r12342009_黃馨慧",
-                studentName: "黃馨慧",
-                studentId: "r12342009",
-                title: "AS06_gender_ratio_map",
-                filename: "r12342009#_黃馨慧 (XING-HUI HUANG)_193506_7619684_AS06_gender_ratio_map.html",
-                category: "social",
-                description: "性別比例地圖視覺化分析"
-            },
-            {
-                id: "r12342019_黃郁淳",
+                id: "r12342019_黃郁淳2",
                 studentName: "黃郁淳",
                 studentId: "r12342019",
-                title: "as6",
-                filename: "r12342019#_黃郁淳 (HUANG, YU-CHUN)_189579_7618657_as6.html",
+                title: "家庭暴力類型與性別分布分析",
+                filename: "r12342019#_黃郁淳 (HUANG, YU-CHUN)_189579_7618659_dom_vio_type.json",
                 category: "gender-violence",
-                description: "家庭暴力類型分析"
+                description: "分析不同類型家庭暴力的性別分布"
             },
             {
-                id: "r13227109_王瀚逸",
+                id: "r12342009_黃馨慧2",
+                studentName: "黃馨慧",
+                studentId: "r12342009",
+                title: "身心障礙人口性別比例地圖分析",
+                filename: "r12342009#_黃馨慧 (XING-HUI HUANG)_193506_7619684_AS06_gender_ratio_map.html",
+                category: "health",
+                description: "以地圖形式分析身心障礙人口的性別比例"
+            },
+            {
+                id: "r13227109_王瀚逸2",
                 studentName: "王瀚逸",
                 studentId: "r13227109",
-                title: "AS06 Gender Data Visualization",
-                filename: "r13227109#_王瀚逸 (WANG, HAN-YI)_216363_7592030_R13227109_AS06-Gender-Data-Visualization.html",
+                title: "性別資料視覺化分析作業",
+                filename: "r13227109#_王瀚逸 (WANG, HAN-YI)_216363_7592029_R13227109_AS06 Gender Data Visualization.Rmd",
                 category: "social",
                 description: "性別資料視覺化分析作業"
             },
             {
-                id: "r13322003_陳廷瑄",
+                id: "r13322003_陳廷瑄2",
                 studentName: "陳廷瑄",
                 studentId: "r13322003",
-                title: "AS06_Gender Data Visualization",
-                filename: "r13322003#_陳廷瑄 (CHEN, TING-SYUAN)_230073_7596227_AS06_Gender-Data-Visualization_R13322003.html",
+                title: "性別資料視覺化分析作業",
+                filename: "r13322003#_陳廷瑄 (CHEN, TING-SYUAN)_230073_7596226_AS06_Gender Data Visualization_R13322003.Rmd",
                 category: "social",
                 description: "性別資料視覺化分析作業"
             },
             {
-                id: "r13342001_高子婷",
+                id: "r13342001_高子婷2",
                 studentName: "高子婷",
                 studentId: "r13342001",
-                title: "0506",
-                filename: "r13342001#_高子婷 (KAO, TZU-TING)_228161_7583877_0506.html",
+                title: "性別資料視覺化分析作業",
+                filename: "r13342001#_高子婷 (KAO, TZU-TING)_228161_7583878_0506.Rmd",
                 category: "social",
-                description: "性別資料視覺化分析"
+                description: "性別資料視覺化分析作業"
             },
             {
-                id: "r13342002_張玳瑋",
+                id: "r13342002_張玳瑋2",
                 studentName: "張玳瑋",
                 studentId: "r13342002",
-                title: "AS06_R13342002張玳瑋",
-                filename: "r13342002#_張玳瑋 (CHANG, TAI-WEI)_228162_7624174_AS06_R13342002張玳瑋.html",
+                title: "性別資料視覺化分析作業",
+                filename: "r13342002#_張玳瑋 (CHANG, TAI-WEI)_228162_7624173_AS06_R13342002張玳瑋.Rmd",
                 category: "social",
                 description: "性別資料視覺化分析作業"
             },
             {
-                id: "r13342008_奚子翔",
+                id: "r13342006_林婕宇2",
+                studentName: "林婕宇",
+                studentId: "r13342006",
+                title: "性別資料視覺化分析作業",
+                filename: "r13342006#_林婕宇 (LIN, CHIEH-YU)_228165_7619891_AS06.Rmd",
+                category: "social",
+                description: "性別資料視覺化分析作業"
+            },
+            {
+                id: "r13342008_奚子翔2",
                 studentName: "奚子翔",
                 studentId: "r13342008",
-                title: "AS06",
-                filename: "r13342008#_奚子翔 (HSI, TZU-HSIANG)_223336_7617510_AS06.html",
+                title: "性別資料視覺化分析作業",
+                filename: "r13342008#_奚子翔 (HSI, TZU-HSIANG)_223336_7617509_AS06.Rmd",
                 category: "gender-violence",
-                description: "家庭暴力相關的性別分析"
+                description: "性別資料視覺化分析作業"
             },
             {
-                id: "r13342009_柯采瑜",
+                id: "r13342009_柯采瑜2",
                 studentName: "柯采瑜",
                 studentId: "r13342009",
-                title: "AS06＿Claire",
-                filename: "r13342009#_柯采瑜 (KE,CAI-YU)_228166_7621912_AS06＿Claire.html",
+                title: "性別資料視覺化分析作業",
+                filename: "r13342009#_柯采瑜 (KE,CAI-YU)_228166_7621913_AS06＿Claire.Rmd",
                 category: "social",
-                description: "性別資料視覺化分析"
+                description: "性別資料視覺化分析作業"
             },
             {
-                id: "r13342018_文嘉翎",
+                id: "r13342018_文嘉翎2",
                 studentName: "文嘉翎",
                 studentId: "r13342018",
-                title: "AS06. Gender Data Visualization",
-                filename: "r13342018#_文嘉翎 (WEN, CHIA-LING)_228168_7615563_R13342018 文嘉翎AS06.-Gender-Data-Visualization.html",
+                title: "性別資料視覺化分析作業",
+                filename: "r13342018#_文嘉翎 (WEN, CHIA-LING)_228168_7615562_R13342018 文嘉翎AS06. Gender Data Visualization.Rmd",
                 category: "social",
                 description: "性別資料視覺化分析作業"
             },
             {
-                id: "r13342032_黃俐珏",
+                id: "r13342032_黃俐珏2",
                 studentName: "黃俐珏",
                 studentId: "r13342032",
-                title: "gender-1",
-                filename: "r13342032#_黃俐珏 (HUANG, LI-CHUEH)_244306_7619074_gender-1.html",
-                category: "social",
-                description: "性別資料視覺化分析"
-            },
-            {
-                id: "b11704028_吳昕祐",
-                studentName: "吳昕祐",
-                studentId: "b11704028",
-                title: "AS06_gender_b11704028吳昕祐",
-                filename: "b11704028#_吳昕祐 (WU, HSIN-YU)_148616_7618311_AS06_gender_b11704028吳昕祐.html",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "b11a01321_莊千逸",
-                studentName: "莊千逸",
-                studentId: "b11a01321",
-                title: "AS06. Gender Data Visualization",
-                filename: "b11a01321#_莊千逸 (CHUANG, CHIEN-YI)_150036_7613535_AS06. Gender Data Visualization.html",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "b12302317_曾予宣",
-                studentName: "曾予宣",
-                studentId: "b12302317",
-                title: "B12302317_AS06-2",
-                filename: "b12302317#_曾予宣 (TSENG,YU-HSUAN)_181211_7598697_B12302317_AS06-2.html",
-                category: "social",
-                description: "性別資料視覺化分析作業"
-            },
-            {
-                id: "b11104009_羅禕",
-                studentName: "羅禕",
-                studentId: "b11104009",
-                title: "0505 HW",
-                filename: "b11104009#_羅  禕 (LUO, YI)_140218_7662563_0505 HW.html",
+                title: "性別資料視覺化分析作業",
+                filename: "r13342032#_黃俐珏 (HUANG, LI-CHUEH)_244306_7619075_gender-1.Rmd",
                 category: "social",
                 description: "性別資料視覺化分析作業"
             }
@@ -755,8 +732,45 @@
 
         // 開啟作業
         function openAssignment(filename) {
-            const url = `gender_data/${encodeURIComponent(filename)}`;
-            window.open(url, '_blank');
+            window.open(`gender_data/${filename}`, '_blank');
+        }
+
+        // 搜尋功能
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredAssignments = assignments.filter(assignment => 
+                    assignment.studentName.toLowerCase().includes(searchTerm) ||
+                    assignment.studentId.toLowerCase().includes(searchTerm) ||
+                    assignment.title.toLowerCase().includes(searchTerm)
+                );
+                renderCards(filteredAssignments);
+            });
+        }
+
+        // 篩選功能
+        function setupFilters() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    // 移除所有active類別
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // 添加active類別到當前按鈕
+                    e.target.classList.add('active');
+                    
+                    const filter = e.target.getAttribute('data-filter');
+                    let filteredAssignments;
+                    
+                    if (filter === 'all') {
+                        filteredAssignments = assignments;
+                    } else {
+                        filteredAssignments = assignments.filter(assignment => assignment.category === filter);
+                    }
+                    
+                    renderCards(filteredAssignments);
+                });
+            });
         }
 
         // 獲取分類文字
@@ -767,68 +781,27 @@
                 'health': '健康議題',
                 'social': '社會議題'
             };
-            return categoryMap[category] || '其他';
+            return categoryMap[category] || category;
         }
 
         // 獲取分類顏色
         function getCategoryColor(category) {
             const colorMap = {
-                'gender-violence': 'rgba(220, 53, 69, 0.9)',
-                'education': 'rgba(40, 167, 69, 0.9)',
-                'health': 'rgba(255, 193, 7, 0.9)',
-                'social': 'rgba(102, 126, 234, 0.9)'
+                'gender-violence': '#e74c3c',
+                'education': '#3498db',
+                'health': '#2ecc71',
+                'social': '#f39c12'
             };
-            return colorMap[category] || 'rgba(108, 117, 125, 0.9)';
+            return colorMap[category] || '#95a5a6';
         }
 
-        // 搜尋功能
-        function setupSearch() {
-            const searchInput = document.getElementById('searchInput');
-            searchInput.addEventListener('input', (e) => {
-                const searchTerm = e.target.value.toLowerCase();
-                const filtered = assignments.filter(assignment => 
-                    assignment.studentName.toLowerCase().includes(searchTerm) ||
-                    assignment.studentId.toLowerCase().includes(searchTerm) ||
-                    assignment.title.toLowerCase().includes(searchTerm)
-                );
-                renderCards(filtered);
-            });
-        }
-
-        // 篩選功能
-        function setupFilters() {
-            const filterBtns = document.querySelectorAll('.filter-btn');
-            filterBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    // 移除所有active類別
-                    filterBtns.forEach(b => b.classList.remove('active'));
-                    // 添加active類別到當前按鈕
-                    e.target.classList.add('active');
-                    
-                    const filter = e.target.dataset.filter;
-                    let filtered;
-                    
-                    if (filter === 'all') {
-                        filtered = assignments;
-                    } else {
-                        filtered = assignments.filter(assignment => assignment.category === filter);
-                    }
-                    
-                    renderCards(filtered);
-                });
-            });
-        }
-
-        // 初始化
-        function init() {
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', () => {
             updateStats();
             renderCards();
             setupSearch();
             setupFilters();
-        }
-
-        // 頁面載入完成後初始化
-        document.addEventListener('DOMContentLoaded', init);
+        });
     </script>
 </body>
 </html> 
