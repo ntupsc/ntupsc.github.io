@@ -1,0 +1,138 @@
+---
+title: "AS07_final"
+author: "R13342002張玳瑋"
+date: "2025-05-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(sf)
+library(ggplot2)
+library(ggthemes)
+library(RColorBrewer)
+library(jsonlite)
+```
+
+## 載入資料
+
+```{r}
+# 出生資料
+births <- read_excel("births_by_age_1.xlsx") %>%
+  mutate(
+    性別 = str_trim(性別),
+    年份 = as.numeric(str_replace(年份, "年", "")) + 1911
+  )
+
+# 地圖資料
+tw_map <- st_read("twCounty2010.geo.json", quiet = TRUE)
+```
+
+## 建立性別比例指標
+
+```{r}
+
+# 整理為 wide format
+births_wide <- births %>%
+  pivot_wider(names_from = 性別, values_from = 人數) %>%
+  rename(男性 = `男`, 女性 = `女`) %>%
+  mutate(
+    性別比 = (女性 - 男性) / (女性 + 男性)
+  )
+
+# 取最新年度資料做地圖
+latest_year <- max(births_wide$年份)
+births_latest <- births_wide %>%
+  filter(年份 == latest_year)
+
+```
+
+## 詮釋資料
+
+```{r}
+#name：人數
+#資料範圍：102年-112年
+#href：https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=81ca3xOmq7PeQ19JLb29nw%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40
+#dep:內政部
+#cat1：健康、醫療與照顧
+#cat2：生育
+#複分類：年度別，縣市別，性別，年齡別，發生登記別
+
+```
+
+## ❶ 地圖：112年新生兒性別比全台分佈
+
+#### **✶ 新聞標題｜性別不平衡：台灣新生兒性別比地圖揭示長期偏差**
+
+#### **✶ 所使用的綜合性指標｜性別差距指標 = (女 - 男) / (女 + 男)**
+
+此指標顯示出某縣市新生兒性別的偏差程度，範圍會落在 -1 到 1 之間，越接近 0 表示越平衡，正值代表女性較多，負值代表男性較多。
+
+```{r}
+
+# 縣市名稱一致化處理
+births_latest$縣市別 <- str_replace_all(births_latest$縣市別, "台", "臺")
+tw_map$COUNTYNAME <- str_replace_all(tw_map$COUNTYNAME, "台", "臺")
+
+# 合併地圖與指標
+map_data <- tw_map %>%
+  left_join(births_latest, by = c("COUNTYNAME" = "縣市別"))
+
+# 畫地圖
+ggplot(map_data) +
+  geom_sf(aes(fill = 性別比), color = "white") +
+  scale_fill_gradient2(low = "red", mid = "white", high = "blue", midpoint = 0, 
+                       name = "性別比\n(女−男)/(女+男)") +
+  labs(title = paste0("各縣市新生兒性別比（", latest_year, "年）")) +
+  theme_map()+
+  theme(
+    text = element_text(family = "Heiti TC Light"),
+    title = element_text(family = "Heiti TC Light")
+  )
+
+```
+
+### 🗺 Finding
+
+112 年台灣各縣市新生兒性別比顯示出明顯地區落差，部分中南部縣市如彰化、南投、雲林等地呈現男性明顯多於女性的現象，可能與地方傳統性別偏好有關；相對而言，臺北市、新竹市等都市區性別比例較為平衡。整體而言，多數縣市性別比略偏向男性，反映出生性別結構受到文化與社會因素影響，顯示台灣在性別平等上仍有潛在挑戰，特別是在生育選擇上。
+
+------------------------------------------------------------------------
+
+## ❷折線圖：臺北市 2013–2023 新生兒性別比
+
+#### **✶ 新聞標題｜**臺北市10年來新生兒性別比持續失衡：男嬰長期占多，性別平等仍存隱性挑戰
+
+**✶ 所使用的綜合性指標｜性別差距指標 = (女 - 男) / (女 + 男)**
+
+此指標顯示出某縣市新生兒性別的偏差程度，範圍會落在 -1 到 1 之間，越接近 0 表示越平衡，正值代表女性較多，負值代表男性較多。
+
+```{r}
+# 指定縣市
+trend_data <- births_wide %>%
+  filter(縣市別 == "臺北市")
+
+ggplot(trend_data, aes(x = 年份, y = 性別比)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_point() +
+  scale_x_continuous(breaks = seq(min(trend_data$年份), max(trend_data$年份), by = 1)) +
+  scale_y_continuous(
+    breaks = c(0.02, 0.01, 0.00, -0.01, -0.02, -0.03, -0.04, -0.05),
+    limits = c(-0.05, 0.02)
+  ) +
+  labs(title = "臺北市新生兒性別比趨勢",
+       x = "年份", y = "(女−男)/(女+男)") +
+    theme(
+    text = element_text(family = "Heiti TC Light"),
+    title = element_text(family = "Heiti TC Light")
+  )
+
+```
+
+### 🗺 臺北市 2013–2023 新生兒性別比Finding
+
+從圖中可見，臺北市2013年至2023年新生兒性別比（(女−男)/(女+男)）長期呈現負值，表示男嬰數量持續多於女嬰。儘管性別比波動範圍不大，但始終未突破零軸，最高約為-0.02，最低接近-0.05，顯示男嬰在出生人口中占比仍偏高。這樣的現象可能反映出潛在的社會文化因素，例如家庭對男嬰的偏好，或是自然性別比以外的結構性偏差。值得注意的是，雖然臺北市作為首都，教育程度與性別意識相對普及，性別比仍顯示出長期且穩定的偏差，說明即使在都市地區，性別平等的實踐仍面臨隱性挑戰，值得政策進一步關注。

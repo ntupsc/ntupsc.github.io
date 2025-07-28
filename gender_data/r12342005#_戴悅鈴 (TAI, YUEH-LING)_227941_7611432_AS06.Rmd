@@ -1,0 +1,111 @@
+---
+title: "112學年度國中中輟性別比分析"
+output: html_document
+---
+
+# 誰更容易離開校園？資料揭露國中男生輟學略高於女生
+
+- name: 國中中輟生人數（依性別）
+- 資料範圍：112學年度，台灣各縣市，教育階段為國中
+- href: https://stats.moe.gov.tw/
+- def: 中輟生為指學生未請假即長期未到校，且經學校認定並通報之人數
+- cat1: 教育統計
+- cat2: 性別別
+- 複分類: 縣市別
+
+```{r setup, include=FALSE}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(sf)
+
+# 中文字型設定（Mac 使用 Heiti TC）
+theme_set(theme_gray(base_family = "Heiti TC"))
+```
+
+## 資料整理與指標設計
+
+```{r}
+# 讀取原始 Excel 檔案
+raw <- read_excel("AS06/國中小中輟生人數 2025年5月9日.xlsx", col_names = FALSE)
+
+# 合併欄位名稱：縣市 + 性別
+col_city <- raw[1, ]
+col_gender <- raw[2, ]
+col_names <- map2_chr(col_city, col_gender, function(city, gender) {
+  if (is.na(gender)) return("學年度")
+  paste0(str_trim(city), "_", str_trim(gender) %>% str_replace_all("　", ""))
+})
+colnames(raw) <- col_names
+
+# 移除前兩列表頭
+df <- raw[-c(1,2), ]
+
+# 擷取112學年度
+df_112 <- df %>% filter(縣市別_性別 == "112學年度")
+
+# 找出有男女資料的縣市
+cities <- col_names[str_detect(col_names, "_男")] %>%
+  str_remove("_男") %>%
+  keep(~ paste0(.x, "_女") %in% col_names)
+
+# 整理成表格
+df_clean <- tibble(
+  縣市 = cities,
+  男中輟生 = map_dbl(cities, ~ as.numeric(df_112[[paste0(.x, "_男")]])),
+  女中輟生 = map_dbl(cities, ~ as.numeric(df_112[[paste0(.x, "_女")]]))
+) %>%
+  mutate(`男/女` = 男中輟生 / 女中輟生)
+```
+
+## 地圖視覺化：中輟性別比（男/女）
+
+```{r}
+# 讀取本地台灣縣市 shapefile
+# 請確保 shapefile 所有檔案（.shp, .dbf, .shx 等）都在相同資料夾中
+
+tw_map <- st_read("AS06/shapefiles/COUNTY_MOI_1140318.shp") %>%
+  rename(縣市 = COUNTYNAME)
+
+# 合併分析資料與地圖
+map_data <- left_join(tw_map, df_clean, by = "縣市")
+
+# 繪圖
+library(tmap)
+
+# 設定中文字型（在 Mac 上使用 Heiti TC）
+theme_set(theme_gray(base_family = "Heiti TC"))
+
+# 設定 tmap 全域輸出大小
+tmap_options(output.size = 1.5)
+tmap_options(component.autoscale = FALSE)
+
+# 畫地圖
+tm_shape(map_data) +
+  tm_polygons("男/女", style = "quantile", palette = "YlOrRd", title = "男/女 中輟比") +
+  tm_layout(
+    main.title = "112學年度國中中輟生性別比地圖",
+    main.title.size = 1.2,
+    legend.outside = TRUE,
+    frame = FALSE,
+    outer.margins = c(0.01, 0.01, 0.01, 0.01),
+    fontfamily = "Heiti TC"  # 直接指定字型
+  )
+
+```
+
+## 長條圖：各縣市中輟人數性別比較
+
+```{r}
+df_long <- df_clean %>%
+  pivot_longer(cols = c("男中輟生", "女中輟生"), names_to = "性別", values_to = "人數")
+
+ggplot(df_long, aes(x = 縣市, y = 人數, fill = 性別)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "112學年度國中中輟人數（依性別）", x = "縣市", y = "人數")
+```
+
+## Findings
+
+依據112學年度各縣市國中中輟資料，男性中輟人數雖在多數縣市中略高於女性，但性別比多集中在1.1至1.3之間，顯示差距有限。僅有少數地區如澎湖縣（2.0）、雲林縣（1.59）與苗栗縣（1.5）呈現較為明顯的男性偏高現象。相對地，彰化與屏東兩縣則呈現完全持平的性別比（1.0），而新北市、花蓮縣、基隆市、嘉義市等地，甚至出現女中輟略高於男的特殊現象。整體來看，中輟性別差異在空間分布上具地區性，反映教育資源、家庭背景或社會文化角色在不同縣市可能造成的微妙影響，未來政策應留意這類差異化趨勢。

@@ -1,0 +1,164 @@
+---
+title: "AS06. Gender Data Visualization"
+author: "莊千逸"
+date: "2025-05-09"
+output: html_document
+---
+
+# 女性為主的居家托育人力：從地圖與年份看性別差異的空間與時間變化
+
+## 詮釋資料
+
+-   **name**：居家托育服務登記證書人數\
+-   **資料範圍**：2013–2023（民國102–112年）\
+-   **href**：[行政院性別平等資料平台](https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=JRmS!SQJS1Wg3AF1jb73YA%40%40&d=194q2o4!otzoYO!8OAMYew%40%40)
+    -   ([https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=JRmS!SQJS1Wg3AF1jb73YA%40%40&d=194q2o4!otzoYO!8OAMYew%40%40)](https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=JRmS!SQJS1Wg3AF1jb73YA%40%40&d=194q2o4!otzoYO!8OAMYew%40%40))
+-   **def**：衛生福利部社會及家庭署\
+-   **cat1**：健康、醫療與照顧\
+-   **cat2**：兒童照顧\
+-   **複分類**：年度別，縣市別，性別
+
+```{r setup, include=FALSE}
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(sf)
+library(tmap)
+library(stringr)
+```
+
+## 資料處理
+
+```{r}
+
+raw_data <- fromJSON("居家托育服務登記證書人數─按性別縣市別分.json")
+
+
+clean_data <- raw_data %>%
+  filter(Category1Title %in% c("男", "女")) %>%
+  select(year = Period, gender = Category1Title, county = Category2Title, value = Val) %>%
+  mutate(year = as.integer(year / 100))
+
+
+wide_data <- clean_data %>%
+  pivot_wider(names_from = gender, values_from = value) %>%
+  mutate(ratio = (女 - 男) / (女 + 男))
+```
+
+## 指標說明
+
+我採用「性別差異指標」此綜合性指標，定義如下：
+
+$$
+\text{性別差異指標} = \frac{\text{女性人數} - \text{男性人數}}{\text{女性人數} + \text{男性人數}}
+$$
+
+該指標可反映女性佔總人數的程度，值越接近 1 表示女性比例越高；值越接近 0 表示男女比例越平衡。本指標經標準化後，能排除各縣市總人數不同所造成的影響 ，使得性別差異具有可比性。
+
+## 地圖讀取與合併（使用 tw.json GeoJSON + 完整對照表）
+
+```{r}
+
+county_dict <- tibble::tibble(
+  COUNTYNAME = c(
+    "Taipei", "Taipei City", "New Taipei", "New Taipei City", 
+    "Taoyuan", "Taichung", "Taichung City", 
+    "Tainan", "Tainan City", "Kaohsiung", "Kaohsiung City", 
+    "Keelung", "Keelung City", "Hsinchu", "Hsinchu City", 
+    "Chiayi", "Chiayi City", "Hsinchu County", "Miaoli", "Changhua", "Nantou", 
+    "Yunlin", "Chiayi County", "Pingtung", "Yilan", "Hualien", "Taitung", 
+    "Penghu", "Kinmen", "Lienchiang", "Matsu Islands"
+  ),
+  county = c(
+    "臺北市", "臺北市", "新北市", "新北市",
+    "桃園市", "臺中市", "臺中市",
+    "臺南市", "臺南市", "高雄市", "高雄市",
+    "基隆市", "基隆市", "新竹市", "新竹市",
+    "嘉義市", "嘉義市", "新竹縣", "苗栗縣", "彰化縣", "南投縣",
+    "雲林縣", "嘉義縣", "屏東縣", "宜蘭縣", "花蓮縣", "臺東縣",
+    "澎湖縣", "金門縣", "連江縣", "連江縣"
+  )
+)
+
+
+data_2023 <- wide_data %>% 
+  filter(year == 112) %>%
+  mutate(
+    county = as.character(county),
+    county = str_replace_all(county, "台", "臺"),
+    county = str_trim(county)
+  )
+
+
+map_sf <- sf::read_sf("tw.json") %>%
+  rename(COUNTYNAME_EN = name) %>%
+  left_join(county_dict, by = c("COUNTYNAME_EN" = "COUNTYNAME"))
+
+
+map_merged <- map_sf %>%
+  left_join(data_2023, by = c("county" = "county"))
+```
+
+## 2023年各縣市居家托育證書人員性別差異指標地圖
+
+```{r}
+tm_shape(map_merged) +
+  tm_polygons("ratio", palette = "Reds", title = "性別差異指標 (112年)",
+              textNA = "無資料", colorNA = "grey90") +
+  tm_layout(
+    title = "2023年各縣市居家托育證書人員性別差異指標地圖",
+    fontfamily = "Heiti TC Light",
+    frame = FALSE
+  )
+```
+
+## 各縣市性別差異排序圖（2023年）
+
+```{r}
+library(forcats)
+
+data_2023 %>%
+  filter(county != "總計") %>%
+  mutate(county = fct_reorder(county, ratio)) %>%
+  ggplot(aes(x = county, y = ratio)) +
+  geom_col(fill = "tomato") +
+  coord_flip() +
+  labs(title = "2023 各縣市居家托育性別差異比例",
+       x = "縣市", y = "性別差異指標") +
+  theme(text = element_text(family = "Heiti TC Light"))
+```
+
+## 2013–2023年全國居家托育性別差異指標趨勢圖
+
+```{r}
+trend_data <- wide_data %>%
+  group_by(year) %>%
+  summarise(total_f = sum(女, na.rm = TRUE),
+            total_m = sum(男, na.rm = TRUE),
+            ratio = (total_f - total_m) / (total_f + total_m))
+
+ggplot(trend_data, aes(x = factor(year), y = ratio, group = 1)) +
+  geom_line(color = "blue") +
+  geom_point() +
+  labs(title = "全國居家托育證書人數性別差異趨勢",
+       y = "性別差異指標", x = "年份") +
+  theme(text = element_text(family = "Heiti TC Light"))
+
+```
+
+## FINDINGS
+
+根據視覺化結果顯示，居家托育證書人數普遍以女性為主，反映出托育職業長期受性別角色影響。值得注意的是，104 年性別差異指標出現明顯下滑，推測與 103 年底正式施行之「居家式托育服務登記制度」有關。該政策啟動後，可能吸引特定時期內大量托育人員登記，其中男性比例相對提高，導致該年性別差異指標短暫趨於平衡。此現象在後續年度迅速回落，顯示該變動具有政策導向下的一次性特徵。
+
+```{r}
+wide_data %>%
+  filter(year == 104) %>%
+  arrange(desc((女 - 男) / (女 + 男)))
+
+wide_data %>%
+  group_by(year) %>%
+  summarise(總計 = sum(男 + 女, na.rm = TRUE))
+```
+
+（從以上資料顯示，104 年為居家托育證書人數高峰，性別差異指標卻異常下降。）

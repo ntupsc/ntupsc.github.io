@@ -1,0 +1,236 @@
+---
+title: '0506'
+output: html_document
+date: "2025-05-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(tidyr)
+
+```
+
+# **作業說明：**
+
+在行政院性平會有整理相當豐富的[重要性別統計資料庫-國內指標](https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_Field.aspx)。但一來他有層層分類，使用者不見得知道他所需要的資料在哪裡；二來，他有些資料來自於過去的委託計畫，計畫過後就沒再更新。使得帳面上似乎有五百多種性別統計資料，但實際上方便用、能夠用的資料，可能不到一半。不過，即使是這樣，他也值得我們去探索、挖掘。這個作業是希望你去找一個性別資料做資料視覺化，由於在行政院上查找太麻煩了，所以我已經幫你打撈好列在 [gender_index_table_new](https://docs.google.com/spreadsheets/d/159mt94LX-SP10dSwOeSxnjKIwfDKNYhzWmKYwgXhpYo/edit?usp=sharing) 中，且做好了資料類型的分類。請找「type」為「互動式查詢」的資料做觀察並下載。每一個人只需要做一項資料。
+
+-   選擇後請在該項資料的「繪製者（學號_姓名）」欄位紀錄你的學號和姓名，不能與他人重複。✅
+
+-   在你繪製的資料之「資料範圍」，標示該項互動查詢最大可能包含的年份（西元），例如「2012-2022」。注意，並非你實際所繪製的年份，是原始資料中包含的年份。
+
+**作業要求：**
+
+1.  整個作業需要包含一個地圖（**至少是縣市層級**），總共要兩張圖（另一張可以是**不同時間的地圖**，或者是Line Plot或其他）
+
+2.  繪製地圖時，每個縣市或鄉鎮的指標應該是一個綜合性指標，例如「女性／男性」，或者「（女性−男性）／（女性＋男性）」。請自行設計，並於內文中作說明。
+
+3.  **新聞標題：**撰寫RMD時，需要以標題一在開頭寫出你認為你的發現可能的新聞標題。
+
+4.  **詮釋資料：**撰寫RMD時，在標題底下點列包含以下你所用到的詮釋資料
+
+    1.  name：該項指標的名字，為「name」欄位的標題如「居家托育服務登記證書人數」。
+
+    2.  資料範圍：
+
+    3.  href：為「href」欄位
+
+    4.  def
+
+    5.  cat1
+
+    6.  cat2
+
+    7.  複分類
+
+**結果詮釋：**就視覺化的結果，撰寫100字的FINDINGS。
+
+# **一、新聞標題：**爺爺們去哪了？性別失衡逾十年的社區關懷訪視
+
+# 二、詮釋資料：
+
+1.  **name：**「社區關懷據點服務人次」
+
+2.  **資料範圍：**年份2004-2024
+
+3.  **href：**<https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=Ygqsoz8%24cSXEn6xx1n2B4Q%40%40&d=194q2o4!otzoYO!8OAMYew%40%40>
+
+4.  **def：**衛生福利部社會及家庭署
+
+5.  **cat1：**健康、醫療與照顧
+
+6.  **cat2：**老人照顧
+
+7.  **複分類：**年度別，性別，縣市別，婦女福利服務類型
+
+8.  **結果詮釋（100字）：**具[113年行政院公布之人口資料](https://www.moi.gov.tw/News_Content.aspx?n=9&s=316654)進行進一步換算，台灣65歲以上老年人口之性別比約為82.48，也就是每 100 位女性對應約 82.48 位男性。然而在「社區關懷據點服務」中會發現，該項目的服務對象之女性佔比較高，列如113年「社區關懷據點服務對象」的性別比約為59.54。而兩張圖表皆揭示了「女性為關懷訪視服務主要接受對象」的趨勢。
+
+    從時間軸來看，整體服務人數除疫情期間皆穩定成長，但女性使用者長期佔多數。而從空間分布來看，不同縣市性別比有顯著差異，顯示出地區間在性別結構、需求型態或接受度上可能具有性別落差。像是東部（花蓮、台東）及部分南部地區（屏東、嘉義市）顏色偏淡，女性服務對象明顯居多。這代表未來在資源配置與政策設計上，可考慮針對性別或地區特性做更精緻的規劃。像是：
+
+    1.男性的關懷需求較低？還是因為何種原因降低男性接受服務的意願？（有失男性氣魄等）
+
+    2.針對女性為主的地區提供性別客製化的服務（在社區舉辦乳房超音波、子宮頸癌檢查等活動）
+
+# 三、資料製作
+
+### 圖表一：縣市層級地圖
+
+-   **步驟解釋：**衛生福利部的社區關懷據點服務人次統計共包含四項服務，分別是「關懷訪視」「電話問安諮詢及轉介服務」「餐飲服務」「健康促進活動」，本作業選擇「關懷訪視」作為主要分析數據，並提去去年（113年度）之資料。總共有兩份資料，分別為男性與女性，兩份整理後的欄位皆包含「縣市別」與「各縣市服務人數」。
+
+```{r}
+#data 113 female data_cleaned113f
+f113_data <- read_csv("113female.csv")
+data_clean113f <- f113_data[, -1] 
+data_cleaned113f <- data_clean113f [-c(1:3), ]
+colnames(data_cleaned113f) <- c("縣市", "female_count")
+data_cleaned113f$female_count <- gsub(",", "", data_cleaned113f$female_count)
+
+# 轉換為數值
+data_cleaned113f$female_count <- as.numeric(data_cleaned113f$female_count)
+
+print(data_cleaned113f)
+
+
+#data 113 male data_cleaned113m
+m113_data <- read_csv("113male.csv")
+data_clean113m <- m113_data[, -1] 
+data_cleaned113m  <- data_clean113m  [-c(1:3), ]
+colnames(data_cleaned113m) <- c("縣市", "male_count")
+data_cleaned113m$male_count <- gsub(",", "", data_cleaned113m$male_count)
+
+# 轉換為數值
+data_cleaned113m$male_count <- as.numeric(data_cleaned113m$male_count)
+
+print(data_cleaned113m)
+
+
+
+```
+
+-   **步驟解釋：**當順利將檔案整理好後，將兩份資料藉由「縣市」別進行整合，綜合性指標則是計算關懷訪視服務對象之性別比。（方法： （男性人數/女性人數）乘以100)
+
+```{r}
+# chart1 data113
+data113 <- merge(data_cleaned113f, data_cleaned113m, by = "縣市")
+data113$ratio <- data113$male_count / data113$female_count
+
+
+# 性別比
+data113 $sex_ratio <- data113$ratio * 100
+print(data113)
+```
+
+-   **步驟解釋：**等等進行結果詮釋時會用到的數據（各縣市服務對象性別平均值），不會用在地圖中。
+
+```{r}
+library(dplyr)
+
+average_sex_ratio <- data113 %>%
+  summarise(mean_sex_ratio = mean(sex_ratio, na.rm = TRUE))
+
+print(average_sex_ratio)
+```
+
+-   **步驟解釋：**將資料套用至地圖當中，形成縣市層級資料。
+
+```{r}
+library(sf)
+library(ggplot2)
+library(readr)
+library(dplyr) 
+
+# 讀取台灣縣市的 Shapefile 
+taiwan_map <- st_read("data/shapefiles/COUNTY_MOI_1090820.shp")
+print(head(taiwan_map))
+
+
+# 資料與地圖資料合併
+data113_renamed <- data113 %>%
+  rename(COUNTYNAME = `縣市`) # 縣市改名為 "COUNTYNAME"
+
+taiwan_map_merged <- taiwan_map %>%
+  right_join(data113_renamed, by = "COUNTYNAME")
+
+# 計算縣市的中心點，用於放置文字標籤
+taiwan_map_centroids <- st_centroid(taiwan_map_merged)
+
+
+# 繪製地圖 
+taiwan_map_merged %>%
+  ggplot(aes(fill = `sex_ratio`)) +
+  geom_sf(color = "black", size = 0.2) +
+  scale_fill_gradient(low = "#FFFFE0", high = "red",
+                      name = "服務對象\n性別比") +
+ geom_sf_text(data = taiwan_map_centroids, aes(label = COUNTYNAME),
+               size = 2.5, # 調整文字大小
+               nudge_x = 0, # 微調文字水平位置
+               nudge_y = 0, # 微調文字垂直位置
+               check_overlap = TRUE, # 防止文字重疊
+               family = "Heiti TC") + 
+  coord_sf(
+    xlim = c(118, 122.5),
+    ylim = c(21.5, 25.5),
+    expand = FALSE
+  ) +
+  labs(
+    title = "113年台灣各縣市關懷訪視服務人數性別比"
+  ) +
+  theme_minimal(base_family = "Heiti TC")
+```
+
+#### 圖表二：折線圖
+
+-   **步驟解釋：**為了查看關懷訪視服務人數近近十年的成長情形，從政府資料中截取104年至113年全國關懷訪視服務人數的總數及個性別人數，並轉換為數值。
+
+```{r}
+data_total <- read_csv("total.csv")
+data_total2 <- data_total [-c(1:4), ]
+colnames(data_total2) <- c("year", "total_count","male_count", "female_count")
+data_total2$total_count <- gsub(",", "", data_total2$total_count)
+data_total2$male_count <- gsub(",", "", data_total2$male_count)
+data_total2$female_count <- gsub(",", "", data_total2$female_count)
+
+data_total2$female_count <- as.numeric(data_total2$female_count)
+data_total2$total_count <- as.numeric(data_total2$total_count)
+data_total2$male_count <- as.numeric(data_total2$male_count)
+
+
+print(data_total2)
+
+```
+
+-   **步驟解釋：**製作折線圖
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+
+data_long <- data_total2 %>%
+  mutate(year_numeric = as.numeric(gsub("年", "", year))) %>% # 提取數值民國年份
+  select(year_numeric, total_count, male_count, female_count) %>%
+  pivot_longer(cols = c(total_count, male_count, female_count),
+               names_to = "group",
+               values_to = "count")
+
+ggplot(data_long, aes(x = year_numeric, y = count, color = group)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title = "社區關懷據點服務＿關懷訪視服務人數變化",
+    x = "年份 (民國)",
+    y = "服務人數",
+    color = "性別/總計"
+  ) +
+  scale_color_discrete(labels = c("female_count" = "女性人數",
+                                  "male_count" = "男性人數",
+                                  "total_count" = "總服務人數")) +
+  scale_x_continuous(breaks = unique(data_long$year_numeric)) + 
+  theme_minimal(base_family = "Heiti TC")
+
+```

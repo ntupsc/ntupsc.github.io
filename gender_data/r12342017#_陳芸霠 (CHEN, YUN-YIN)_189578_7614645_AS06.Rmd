@@ -1,0 +1,201 @@
+---
+title: "AS06"
+author: "陳芸霠"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, cache = T, warning = F, message = FALSE, class.output = "output")
+library(knitr)
+library(tidyverse)
+library(readxl)
+library(stringr)
+```
+
+# 新聞標題： 超高齡社會來臨 長照機構照顧人力足夠嗎？
+
+## 資料
+
+-   name: 老人長期照護、養護及安養機構工作人員數
+
+-   資料範圍：2002-2023
+
+-   href: <https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=PsKAvsFoXLFcIub5I5r!GA%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40>
+
+-   cat1: 健康、醫療與照顧
+
+-   cat2: 老人照顧
+
+-   複分類：年度別，縣市別，性別，工作人員類別，工作人員國籍別
+
+```{r}
+raw <- read_excel(path = "data/AS06_data.xlsx", sheet = 1, skip = 2)
+
+raw %>%
+    head()
+```
+
+```{r}
+data <- raw %>%
+    rename(gender = 性別, staff = 老人機構工作人員別, nationality = 國籍別, county = 縣市別, `103` = `103年`, `104` = `104年`, `105` = `105年`, `106` = `106年`, `107` = `107年`, `108` = `108年`, `109` = `109年`, `110` = `110年`, `111` = `111年`, `112` = `112年`) %>%
+    mutate_all(~na_if(., "-")) %>%
+    mutate(county = case_when(
+        county %in% c("桃園縣", "桃園市") ~ "桃園市",
+        TRUE ~ county)) %>%
+    mutate(staff = str_replace_all(staff, "\u3000", ""),
+           nationality = str_replace_all(nationality, "\u3000", "")) %>%
+    mutate(staff = case_when(
+        staff %in% c("院長(主任)", "行政人員(含主任)") ~ "行政人員(院長、主任)",
+        TRUE ~ staff)) %>%
+    mutate(across(c(staff, nationality, county), as.factor),
+           across(starts_with(c("10","11")), as.numeric)) %>%
+    select(-gender)
+```
+
+資料處理：在老人長照機構中，「服務人員」作為基本照顧服務人力，是機構是否能夠提供好的照顧服務的關鍵之一，需要的人力也最多。「服務人員」在資料中包含照顧服務員、外籍看護工（104年後獨立成項）及服務相關之專業人員，顯示此一工作目前也仰賴外籍移工的協助。
+
+以下計算各縣市在112年時，機構雇用外國籍服務人員的比例，並依照比例高低程度分為三組，以在地圖上進行視覺化。
+
+```{r}
+foreign_ratio <- data %>%
+    filter(staff == "服務人員") %>%
+    group_by(county, nationality) %>%
+    summarise(count_112 = sum(`112`, na.rm = TRUE), .groups = "drop") %>%
+    group_by(county) %>%
+    mutate(total = sum(count_112),
+           proportion = round(count_112 / total, 3))  %>%
+    filter(nationality == "外國籍")
+```
+
+```{r}
+quantiles <- quantile(foreign_ratio$proportion, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE)
+
+ratio_grouped <- foreign_ratio %>%
+    mutate(group = cut(
+    proportion,
+    breaks = quantiles,       
+    labels = c("低", "中（>36%）", "高（>41%）"),
+    include.lowest = TRUE)) %>%
+    filter(county != "衛福部直轄(所屬)機構") %>%
+    select(county, proportion, group)
+```
+
+```{r}
+library(sf)
+
+ratio_map <- st_read("data/shapefiles/COUNTY_MOI_1090820.shp") %>%
+    st_simplify(dTolerance = 100) %>%
+    right_join(ratio_grouped, by=c("COUNTYNAME"="county"))
+
+taiwan_bbox <- st_bbox(c(
+  xmin = 118, xmax = 123,
+  ymin = 21.8, ymax = 26.5), crs = st_crs(ratio_map))
+
+map <- st_crop(ratio_map, taiwan_bbox) 
+```
+
+圖一
+
+```{r}
+map %>%
+    ggplot(aes(fill = group)) +
+    geom_sf(color="white", size=0.1) + 
+    scale_fill_manual(values = c(
+    "低" = "#D6DBF5",
+    "中（>36%）" = "#475ED1",
+    "高（>41%）" = "#1F2E7A" )) +
+    labs(fill = "依比例進行程度分組",
+    title = "各縣市老人長照機構僱用外籍服務人員比例")+
+    theme_minimal() +
+    theme(plot.title = element_text(size = 15, face = "bold"))+
+    geom_sf_text(aes(label = COUNTYNAME), size = 2, color = "gray")
+```
+
+```{r}
+df_long <- data %>%
+    filter(staff == "服務人員") %>%  
+    pivot_longer(cols = `103`:`112`, names_to = "year", values_to = "count")
+
+result <- df_long %>%
+    group_by(county, year, nationality) %>%
+    summarise(count = sum(count, na.rm = TRUE), .groups = "drop") %>%
+    group_by(county, year) %>%
+    mutate(total = sum(count),
+           proportion = round(count / total, 3)) %>%
+    ungroup()
+
+trend_data <- result %>%
+    group_by(nationality, year) %>%
+    summarise(num = sum(count, na.rm = TRUE), .groups = "drop") %>%
+    group_by(year) %>%
+    mutate(total = sum(num),
+           proportion = round(num / total, 3)) %>%
+    select(year, nationality, num, total, proportion) 
+
+trend_data %>%
+    select(year, nationality, num) %>%
+    pivot_wider(names_from = year, values_from = num,
+                names_prefix = "year_") %>%
+    mutate(trend = round((year_112 - year_106) / year_106, 3)) 
+    # view()
+#本國籍增加率：11.7% 外國籍增加率：15%
+```
+
+圖二
+
+```{r}
+trend_data %>%
+    filter(year %in% c("106","107","108","109","110","111","112")) %>%
+    ggplot() +
+    aes(x = year, y = num, colour = nationality, group = nationality) +
+    geom_line()+
+    geom_point()+
+    coord_cartesian(ylim = c(5000, 12000)) +
+    labs(y = "服務人員數", x = "年份",
+         title = "長照2.0實施後，老人長照機構服務人員數變化")+
+    geom_text(data = subset(trend_data ,year == 112),
+            aes(label = num), hjust = -0.1, size = 3.5, nudge_y = 0.01) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 15, face = "bold"))
+    
+```
+
+## 結果詮釋
+
+### 圖一：各縣市老人長照機構僱用外籍服務人員比例
+
+```{r}
+map %>%
+    ggplot(aes(fill = group)) +
+    geom_sf(color="white", size=0.1) + 
+    scale_fill_manual(values = c(
+    "低" = "#D6DBF5",
+    "中（>36%）" = "#475ED1",
+    "高（>41%）" = "#1F2E7A" )) +
+    labs(fill = "依比例進行程度分組",
+    title = "各縣市老人長照機構僱用外籍服務人員比例")+
+    theme_minimal() +
+    theme(plot.title = element_text(size = 15, face = "bold"))+
+    geom_sf_text(aes(label = COUNTYNAME), size = 2, color = "gray")
+```
+
+### 圖二：長照2.0實施後，老人長照機構服務人員數變化
+
+```{r}
+trend_data %>%
+    filter(year %in% c("106","107","108","109","110","111","112")) %>%
+    ggplot() +
+    aes(x = year, y = num, colour = nationality, group = nationality) +
+    geom_line()+
+    geom_point()+
+    coord_cartesian(ylim = c(5000, 12000)) +
+    labs(y = "服務人員數", x = "年份",
+         title = "長照2.0實施後，老人長照機構服務人員數變化")+
+    geom_text(data = subset(trend_data ,year == 112),
+            aes(label = num), hjust = -0.1, size = 3.5, nudge_y = 0.01) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 15, face = "bold"))
+```
+
+說明：《長期照顧十年計劃2.0》自106年開始實施，政策包含持續擴大培訓及培育相關人力，以滿足人力需求，其中政府指出，當時最缺乏的是在第一線服務的照顧服務人員。圖一的地圖顯示，在112年時，大部分縣市外國籍服務人員的比例大於35%，其中新竹縣/市、花蓮縣、彰化縣、嘉義縣/市、南投縣等依賴外籍移工的情況更明顯。透過圖二，可發現自長照2.0實施以來，本國籍及外國籍的服務人員數量皆成長有限，但外國籍的增加率（15%）略高於本國籍（11.7%），顯示相關政策在增加本國服務人力上仍有不足之處。整體來看，除了疫情期間外籍人數有所下降外，外籍移工的服務在台灣的老人長照機構中仍相當重要。

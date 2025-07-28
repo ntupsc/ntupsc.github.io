@@ -1,0 +1,127 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-05-11"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(knitr)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(jsonlite)
+library(sf)
+library(scales)
+
+```
+
+# 各縣市中 男性仍主要為家庭暴力加害者
+
+-   name：家庭暴力加害人年齡統計
+
+-   資料範圍： 2005\~2023
+
+-   href：https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=ToMzjr88zezoO09!aGj13A%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40
+
+-   def： 衛生福利部
+
+-   cat1： 人身安全與司法
+
+-   cat2： 家庭暴力
+
+-   複分類：年度別、年齡別、性別、縣市別
+
+```{r}
+
+json_data <- fromJSON("data/家庭暴力事件通報加害人概況－年齡分.json")
+
+df <- json_data %>%
+  rename(
+    age = Category1Title,
+    county = Category2Title,
+    gender = Category3Title,
+    year_raw = Period,
+    count = Val
+  ) %>%
+  filter(gender %in% c("男", "女")) %>%  
+  mutate(
+    year = floor(year_raw / 100) + 1911  
+  )
+
+gender_index <- df %>%
+  group_by(county, year, gender) %>%
+  summarise(total = sum(count, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = gender, values_from = total, values_fill = 0) %>%
+  mutate(
+    index = (女 - 男) / (女 + 男)
+  )
+
+map_data <- gender_index %>%
+  filter(year == 2023)
+
+tw_county_shp <- st_read("data/直轄市、縣(市)界線1140318/COUNTY_MOI_1140318.shp")  
+tw_map <- tw_county_shp %>%
+  left_join(map_data, by = c("COUNTYNAME" = "county"))
+
+ggplot(tw_map) +
+  geom_sf(aes(fill = index), color = "white") +
+  scale_fill_gradient2(
+    low = "#B22222", mid = "white", high = "blue", 
+    midpoint = 0, name = "性別比傾向（深紅色：男性）") +
+  labs(title = "2023 年各縣市家庭暴力加害人性別比傾向") +
+  coord_sf(xlim = c(119.5, 122.2), ylim = c(21.5, 25.5), expand = FALSE)+
+  theme_minimal()
+
+```
+
+# 近三年數據顯示 家暴加害人以30-65歲男性最多
+
+```{r}
+
+age_levels <- c(
+   "12-未滿18歲", "18-未滿24歲", "24-未滿30歲", "30-未滿40歲", "40-未滿50歲", "50-未滿65歲", "65歲以上"
+)
+
+recent_years <- sort(unique(df$year), decreasing = TRUE)[1:3]
+
+filtered_df <- df %>% 
+  filter(year %in% recent_years,
+    !age %in% c("不詳", "總計"),
+    age %in% age_levels
+  ) %>%
+  mutate(age = factor(age, levels = age_levels))
+
+ggplot(filtered_df, aes(x = age, y = count, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~ year, ncol = 3) +
+  scale_fill_manual(values = c("女" = "#e41a1c", "男" = "#377eb8")) +
+  labs(
+    title = "近三年家庭暴力加害人各年齡層與性別人數",
+    x = "年齡層", y = "人數", fill = "性別"
+  ) +
+    scale_x_discrete(labels = c(
+    "12-未滿18歲" = "12-18歲", 
+    "18-未滿24歲" = "18-24歲", 
+    "24-未滿30歲" = "24-30歲", 
+    "30-未滿40歲" = "30-40歲", 
+    "40-未滿50歲" = "40-50歲", 
+    "50-未滿65歲" = "50-65歲"
+  )) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+-   結果：
+
+    -   圖一：就縣市別而言，連江縣（但樣本數少）、苗栗縣、嘉義縣、宜蘭縣為家暴加害人偏向男性最嚴重的城市，且各縣市的男性加害者數量都比女性加害者數量多。
+
+    -   圖二：本圖呈現 2021～2023
+        年加害人於不同年齡層中的性別數量差異。可以觀察到，在 30～65
+        歲間的三組年齡層，男性加害者佔比顯著高於女性，且此趨勢在三年間變動不大。

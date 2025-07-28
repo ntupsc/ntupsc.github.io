@@ -1,0 +1,182 @@
+---
+title: "AS06. Gender Data Visualization"
+name: "R13342018＿文嘉翎"
+output: html_document
+date: "2025-05-10"
+
+---
+標題：男性軍人申請育嬰留職停薪比例大幅提升 六年來性別差距縮小近一半
+詮釋資料
+name: 軍職人員保險育嬰留職停薪津貼統計
+資料範圍: 107-112年 (2018-2023)
+href: 行政院性別平等會統計資料
+def: 記錄軍職人員申請育嬰留職停薪津貼的人數與金額，依性別分類
+cat1: 就業、經濟與福利
+cat2: 工作與家庭
+複分類: 性別統計、家庭照顧
+
+資料分析與視覺化
+1. 各年度軍職人員育嬰留職停薪性別比例區域圖
+由於原始資料中沒有地理空間資訊，因此將各年度視為不同「區域」，呈現六年間性別比例的變化趨勢。這樣的視覺化方式能夠呈現時間維度上的「地理分布」差異。
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+```{r}
+# 載入必要套件
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(showtext)
+library(sysfonts)
+
+# 設定中文字體
+font_add("STHeiti", regular = "/System/Library/Fonts/STHeiti Light.ttc") 
+
+# 啟用showtext
+showtext_auto()
+```
+
+```{r}
+# 彙整107-112年數據
+yearly_data <- data.frame(
+  年度 = c("107年", "108年", "109年", "110年", "111年", "112年"),
+  西元年 = 2018:2023,
+  男性初次核發數 = c(244, 319, 312, 357, 698, 751),
+  女性初次核發數 = c(565, 593, 604, 670, 834, 826),
+  男性核發總人數 = c(1454, 1854, 1747, 1980, 3546, 3951),
+  女性核發總人數 = c(3408, 3665, 3630, 4099, 4703, 4850)
+)
+```
+
+```{r}
+# 計算性別比例和差異指標
+yearly_data <- yearly_data %>%
+  mutate(
+    初次核發總數 = 男性初次核發數 + 女性初次核發數,
+    男性初次申請比例 = 男性初次核發數 / 初次核發總數,
+    女性初次申請比例 = 女性初次核發數 / 初次核發總數,
+    初次申請性別差異指標 = (男性初次核發數 - 女性初次核發數) / 初次核發總數,
+    核發總數 = 男性核發總人數 + 女性核發總人數,
+    男性核發比例 = 男性核發總人數 / 核發總數,
+    女性核發比例 = 女性核發總人數 / 核發總數,
+    核發性別差異指標 = (男性核發總人數 - 女性核發總人數) / 核發總數
+  )
+```
+
+```{r}
+# 創建時間區域圖 (模擬地圖)
+ggplot(yearly_data, aes(x = 西元年, y = 初次申請性別差異指標)) +
+  geom_bar(aes(fill = 初次申請性別差異指標), stat = "identity", width = 0.7) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  scale_fill_gradient2(
+    low = "pink", 
+    mid = "white",
+    high = "steelblue", 
+    midpoint = 0,
+    labels = percent
+  ) +
+  geom_text(aes(label = paste0(round(男性初次申請比例*100, 1), "%")), vjust = -0.5) +
+  scale_x_continuous(breaks = 2018:2023, labels = c("107年", "108年", "109年", "110年", "111年", "112年")) +
+  scale_y_continuous(labels = percent) +
+  labs(
+    title = "107-112年軍職人員育嬰留職停薪申請性別差異指標變化",
+    subtitle = "負值表示女性比例高於男性，正值表示男性比例高於女性",
+    x = "年度",
+    y = "性別差異指標 (男-女)/(男+女)",
+    fill = "性別差異指標"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(family = "Microsoft YaHei", face = "bold", size = 14),
+    plot.subtitle = element_text(family = "Microsoft YaHei"),
+    axis.title = element_text(family = "Microsoft YaHei"),
+    axis.text = element_text(family = "Microsoft YaHei"),
+    axis.text.x = element_text(angle = 0, hjust = 0.5, size = 10),
+    legend.title = element_text(family = "Microsoft YaHei"),
+    legend.text = element_text(family = "Microsoft YaHei"),
+    legend.position = "right"
+  )
+```
+
+
+
+2. 各年度育嬰留職停薪申請性別比例地圖
+```{r}
+# 創建「區域」地圖數據，以年度作為區域區分
+map_data <- data.frame(
+  區域ID = 1:6,
+  區域名稱 = c("107年", "108年", "109年", "110年", "111年", "112年"),
+  X座標 = c(1, 3, 2, 3, 1, 2),  # 模擬X座標
+  Y座標 = c(3, 3, 2, 1, 1, 2),  # 模擬Y座標
+  男性比例 = yearly_data$男性初次申請比例,
+  女性比例 = yearly_data$女性初次申請比例,
+  性別差異指標 = yearly_data$初次申請性別差異指標
+)
+
+# 創建象限地圖
+ggplot(map_data, aes(x = X座標, y = Y座標)) +
+  geom_tile(aes(fill = 性別差異指標), width = 0.9, height = 0.9) +
+  geom_text(aes(label = 區域名稱), family = "Microsoft YaHei", size = 5, fontface = "bold") +
+  geom_text(aes(label = paste0(round(男性比例*100, 1), "%")), family = "Microsoft YaHei", size = 4, vjust = 1.5) +
+  scale_fill_gradient2(
+    low = "pink", 
+    mid = "white",
+    high = "steelblue", 
+    midpoint = 0,
+    labels = percent
+  ) +
+  labs(
+    title = "軍職人員育嬰留職停薪申請性別比例區域圖",
+    subtitle = "色彩深淺代表男女比例差距",
+    fill = "性別差異指標\n(男-女)/(男+女)"
+  ) +
+  theme_void() +
+  theme(
+    plot.title = element_text(family = "Microsoft YaHei", face = "bold", size = 14),
+    plot.subtitle = element_text(family = "Microsoft YaHei"),
+    legend.title = element_text(family = "Microsoft YaHei"),
+    legend.text = element_text(family = "Microsoft YaHei"),
+    legend.position = "right"
+  ) +
+  coord_equal()
+```
+
+
+3. 各年度性別比例趨勢圖
+```{r}
+# 轉換為長格式用於繪圖
+yearly_trend <- yearly_data %>%
+  select(年度, 西元年, 男性初次申請比例, 男性核發比例) %>%
+  pivot_longer(cols = c(男性初次申請比例, 男性核發比例), 
+               names_to = "指標類型", 
+               values_to = "男性比例")
+
+# 性別比例趨勢圖
+ggplot(yearly_trend, aes(x = 西元年, y = 男性比例, group = 指標類型, color = 指標類型)) +
+  geom_line(size = 1.5) +
+  geom_point(size = 3) +
+  scale_x_continuous(breaks = 2018:2023, labels = c("107年", "108年", "109年", "110年", "111年", "112年")) +
+  scale_y_continuous(labels = percent, limits = c(0, 0.55)) +
+  labs(title = "107-112年軍職人員育嬰留職停薪性別比例變化",
+       subtitle = "男性占比逐年提升，性別差距縮小",
+       x = "年度",
+       y = "男性佔比",
+       color = "類型") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(family = "Microsoft YaHei", face = "bold", size = 14),
+    plot.subtitle = element_text(family = "Microsoft YaHei"),
+    axis.title = element_text(family = "Microsoft YaHei"),
+    axis.text = element_text(family = "Microsoft YaHei", size = 12),
+    legend.title = element_text(family = "Microsoft YaHei"),
+    legend.text = element_text(family = "Microsoft YaHei"),
+    legend.position = "bottom"
+  )
+```
+
+
+研究發現
+分析六年來(107-112年)軍職人員申請育嬰留職停薪的資料顯示，男性參與比例呈現明顯上升趨勢。107年男性初次申請比例僅30.2%，而112年已達47.6%，性別差距縮小近一半。最顯著的變化發生在110-111年間，男性初次申請增幅達95.5%，遠高於女性的24.5%。112年數據顯示男女申請比例已接近均衡，部分月份甚至出現男性申請人數超過女性的情況。這種轉變反映軍中性別平等觀念進步，男性軍人更願意承擔家庭照顧責任。整體申請人數也從107年的809人增至112年的1,577人，成長近一倍，說明育嬰福利政策使用率全面提升，有助於軍職人員兼顧職涯發展與家庭責任。

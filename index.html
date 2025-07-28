@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTU PSC - 人口與性別研究中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .about-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+
+        .about-section h2 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .about-section p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .service-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        }
+
+        .service-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .service-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .service-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .service-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .service-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .service-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .features-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 40px 0;
+            color: white;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .feature-description {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            line-height: 1.5;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: white;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .header p {
+                font-size: 1.1rem;
+            }
+            
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .service-card {
+                padding: 25px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header fade-in">
+            <h1>📊 NTU PSC 人口與性別研究中心</h1>
+            <p>歡迎來到台灣大學政治學系人口與性別研究中心的資料彙整與分享平台。這裡展示了學生們在資料科學和視覺化分析方面的優秀成果，致力於推動性別平等與人口研究。</p>
+        </div>
+
+        <div class="about-section fade-in">
+            <h2>🎯 研究中心簡介</h2>
+            <p>
+                台灣大學政治學系人口與性別研究中心致力於推動性別平等與人口研究，透過資料科學和視覺化分析技術，
+                深入探討社會中的性別議題、人口變遷趨勢，以及相關政策影響。我們提供多元化的研究服務，
+                包括性別資料視覺化分析、人口統計研究、政策影響評估等。
+            </p>
+            <p>
+                本中心匯集了來自不同學術背景的研究人員和學生，共同致力於透過數據驅動的研究方法，
+                為性別平等和人口政策提供科學依據。我們相信，透過深入的分析和清晰的視覺化呈現，
+                能夠更好地理解社會現象，並為政策制定提供有價值的參考。
+            </p>
+        </div>
+
+        <div class="services-grid">
+            <div class="service-card fade-in" onclick="window.open('gender_data_index.html', '_blank')">
+                <div class="service-icon">🎯</div>
+                <div class="service-title">性別資料視覺化分析</div>
+                <div class="service-description">
+                    彙整32位學生的性別相關資料視覺化分析作業，涵蓋性別暴力、教育統計、健康議題和社會議題等多個面向。
+                    每個學生都針對不同的性別相關議題進行深入的資料分析和視覺化呈現，展現了多元化的研究視角。
+                </div>
+                <div class="service-stats">
+                    <span class="stat-item">📊 32個作業</span>
+                    <span class="stat-item">👥 32位學生</span>
+                    <span class="stat-item">🏷️ 4個主題</span>
+                </div>
+                <button class="service-btn" onclick="event.stopPropagation(); window.open('gender_data_index.html', '_blank')">
+                    查看專案 →
+                </button>
+            </div>
+
+            <div class="service-card fade-in" onclick="window.open('gender_index_tree.html', '_blank')">
+                <div class="service-icon">🌳</div>
+                <div class="service-title">性別研究知識樹</div>
+                <div class="service-description">
+                    以樹狀結構呈現性別研究的知識體系，涵蓋理論基礎、研究方法、實證分析等多個層面。
+                    透過互動式的知識樹，幫助研究者快速了解性別研究的各個面向，並找到相關的研究資源和文獻。
+                </div>
+                <div class="service-stats">
+                    <span class="stat-item">🌿 知識樹結構</span>
+                    <span class="stat-item">📚 研究資源</span>
+                    <span class="stat-item">🔗 互動導覽</span>
+                </div>
+                <button class="service-btn" onclick="event.stopPropagation(); window.open('gender_index_tree.html', '_blank')">
+                    探索知識樹 →
+                </button>
+            </div>
+        </div>
+
+        <div class="features-section fade-in">
+            <h2 style="text-align: center; margin-bottom: 30px; font-size: 2rem;">✨ 研究中心特色</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">🔍</div>
+                    <div class="feature-title">智能搜尋</div>
+                    <div class="feature-description">支援依學生姓名、學號或作業標題進行快速搜尋</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🏷️</div>
+                    <div class="feature-title">分類篩選</div>
+                    <div class="feature-description">按主題分類快速篩選，找到相關研究</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📱</div>
+                    <div class="feature-title">響應式設計</div>
+                    <div class="feature-description">支援各種裝置，手機、平板、桌面完美呈現</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🎨</div>
+                    <div class="feature-title">現代化介面</div>
+                    <div class="feature-description">美觀的卡片式佈局和流暢的動畫效果</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="about-section fade-in">
+            <h2>📁 檔案結構</h2>
+            <p>
+                本研究中心網站包含以下主要檔案和目錄：
+            </p>
+            <ul style="color: #666; line-height: 1.8; margin-left: 20px; font-size: 1.1rem;">
+                <li><strong>index.html</strong> - 研究中心主頁面</li>
+                <li><strong>gender_data_index.html</strong> - 性別資料視覺化分析彙整平台</li>
+                <li><strong>gender_index_tree.html</strong> - 性別研究知識樹</li>
+                <li><strong>gender_data/</strong> - 學生作業資料夾，包含32位學生的性別資料視覺化分析</li>
+                <li><strong>README.md</strong> - 專案說明文件</li>
+            </ul>
+        </div>
+
+        <div class="about-section fade-in">
+            <h2>🎨 視覺化主題</h2>
+            <p>
+                我們的性別資料視覺化分析涵蓋以下四個主要主題：
+            </p>
+            <ul style="color: #666; line-height: 1.8; margin-left: 20px; font-size: 1.1rem;">
+                <li><strong>🔴 性別暴力</strong> - 性侵害、家庭暴力等相關分析</li>
+                <li><strong>🟢 教育統計</strong> - 中輟學生、新住民子女教育等議題</li>
+                <li><strong>🟡 健康議題</strong> - AIDS發病率、身心障礙人口等健康相關分析</li>
+                <li><strong>🔵 社會議題</strong> - 各種社會現象的性別差異分析</li>
+            </ul>
+        </div>
+
+        <div class="about-section fade-in">
+            <h2>📱 使用方式</h2>
+            <p>
+                歡迎使用本研究中心提供的各項服務：
+            </p>
+            <ol style="color: #666; line-height: 1.8; margin-left: 20px; font-size: 1.1rem;">
+                <li><strong>瀏覽性別資料分析</strong> - 點擊「性別資料視覺化分析」卡片查看所有學生作業</li>
+                <li><strong>探索知識樹</strong> - 點擊「性別研究知識樹」卡片進入互動式知識導覽</li>
+                <li><strong>搜尋特定研究</strong> - 使用搜尋框快速找到目標研究</li>
+                <li><strong>分類篩選</strong> - 按主題分類篩選相關研究</li>
+            </ol>
+        </div>
+
+        <div class="footer fade-in">
+            <p>© 2024 台灣大學政治學系人口與性別研究中心 | 資料視覺化與分析專案</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                本平台展示學生在資料科學和視覺化分析方面的學習成果，致力於推動性別平等與人口研究
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 添加滾動動畫效果
+        function animateOnScroll() {
+            const elements = document.querySelectorAll('.fade-in');
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 150;
+                
+                if (elementTop < window.innerHeight - elementVisible) {
+                    element.style.opacity = '1';
+                    element.style.transform = 'translateY(0)';
+                }
+            });
+        }
+
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始動畫
+            setTimeout(() => {
+                document.querySelectorAll('.fade-in').forEach(element => {
+                    element.style.opacity = '0';
+                    element.style.transform = 'translateY(30px)';
+                });
+                
+                // 觸發滾動動畫
+                window.addEventListener('scroll', animateOnScroll);
+                animateOnScroll();
+            }, 100);
+        });
+    </script>
+</body>
+</html> 

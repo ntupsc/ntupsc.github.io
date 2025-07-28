@@ -1,0 +1,106 @@
+---
+title: "臺灣各縣市身心障礙人口占比變化分析"
+output: html_document
+---
+
+# 台灣老化挑戰升溫：花東地區身障人口占比遠高於雙北
+
+## 詮釋資料
+- name：身心障礙人數
+- 資料範圍：民國93年－112年 全國22縣市  
+- href：https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=SBhK1qUGuEFWBphB1qoGmg%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40
+- dep：行政院性別平等會重要性別統計資料庫
+- cat1：人口與社會  
+- cat2：身心障礙者統計  
+- 複分類：依縣市／年度／性別統計
+
+## FINDINGS
+- 身心障礙人口分布呈現明顯地區差異，六都如新北市、高雄市人口最多，且多數縣市於104至112年間略有上升或持平，顯示長期照護與資源配置仍需依地方條件調整。
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(sf)
+library(ggplot2)
+library(readr)
+library(showtext)
+font_add("tw", "PingFang.ttc")  
+showtext_auto()
+```
+
+```{r}
+# 讀入資料
+map_data <- st_read("COUNTY_MOI_1140318.shp")
+pop_raw <- read_csv("身心障礙人數縣市.csv", skip = 2)
+
+# 整理地名與年分
+county_names <- pop_raw[1, -1] %>% unlist() %>% as.character()
+county_names <- county_names[!is.na(county_names)]
+year_rows <- pop_raw[-1, ]
+colnames(year_rows) <- c("year", county_names)
+
+long_df <- year_rows %>%
+  mutate(year = str_remove(year, "年") %>% as.integer()) %>%
+  pivot_longer(-year, names_to = "county", values_to = "pop") %>%
+  mutate(
+    pop = as.numeric(str_replace_all(pop, ",", "")),
+    county = str_replace_all(county, "^台", "臺")
+  ) %>%
+  group_by(year) %>%
+  mutate(share = pop / sum(pop, na.rm = TRUE)) %>%
+  ungroup()
+
+# 篩選 112 年資料
+df_112 <- long_df %>% filter(year == 112)
+
+# 合併地圖與資料
+map_df <- map_data %>%
+  mutate(COUNTYNAME = str_trim(COUNTYNAME)) %>%
+  left_join(df_112, by = c("COUNTYNAME" = "county"))
+
+# 畫地圖
+ggplot(map_df) +
+  geom_sf(aes(fill = share), color = "white") +
+  scale_fill_viridis_c(label = scales::percent_format(), name = "佔比") +
+  labs(
+    title = "112年 各縣市身心障礙人口",
+    subtitle = "行政院性別平等會重要性別統計資料庫"
+  ) +
+  theme_minimal(base_family = "tw")
+
+```
+
+```{r}
+# 載入與清理資料
+df <- read_csv("身心障礙人數性別.csv", skip = 4, col_names = c("year", "male", "female")) %>%
+  filter(str_detect(year, "年")) %>%
+  mutate(
+    year = as.integer(str_extract(year, "\\d+")),
+    male = as.integer(str_replace_all(male, "[,　]", "")),
+    female = as.integer(str_replace_all(female, "[,　]", "")),
+    total = male + female
+  )
+
+df_long <- df %>%
+  pivot_longer(cols = c(male, female, total), names_to = "gender", values_to = "count") %>%
+  mutate(gender = recode(gender, male = "男性", female = "女性", total = "總數"))
+
+# 設定顏色與線條樣式
+color_map <- c("女性" = "pink", "男性" = "blue", "總數" = "yellow")
+linetype_map <- c("女性" = "solid", "男性" = "solid", "總數" = "dashed")
+
+# 繪圖
+ggplot(df_long, aes(x = year, y = count, color = gender, linetype = gender)) +
+  geom_line(size = 1.2) +
+  scale_color_manual(values = color_map) +
+  scale_linetype_manual(values = linetype_map) +
+  labs(
+    title = "104–112 年身心障礙人口性別趨勢圖",
+    x = "年份",
+    y = "人口數"
+  ) +
+  theme_minimal(base_family = "tw") +
+  theme(
+    text = element_text(family = "tw"),
+    legend.title = element_blank()
+  )
+```

@@ -1,0 +1,142 @@
+---
+title: "domestic violence"
+author: "hsiang"
+date: "2025-05-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(jsonlite)
+library(dplyr)
+library(tidyverse)
+library(sf)
+```
+
+## 資料讀入與基本整理
+
+-   name：家庭暴力事件通報被害人年齡統計
+
+-   資料範圍：2005-2023
+
+-   href：<https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=zAEhpoQODh1OBA8klG5naQ%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40>
+
+-   def：本資料記錄各縣市依性別、年齡分類之家庭暴力事件通報被害人數。
+
+-   cat1：人身安全與司法
+
+-   cat2：家庭暴力
+
+-   複分類：年齡別，年度別，縣市別，性別
+
+```{r}
+
+df <- fromJSON("/Users/abby/Desktop/DataJournalism/R4CSS-master/data/家庭暴力事件被害人年齡分佈.json")
+
+df <- df %>%
+  rename(
+    Age = Category1Title,
+    City = Category2Title,
+    Gender = Category3Title,
+    YearRaw = Period,
+    Count = Val
+  )%>%
+  mutate(Year = YearRaw / 100) %>%
+  select(-Category4Title, -Category5Title) %>%
+  mutate(
+    City = ifelse(City == "桃園縣", "桃園市", City)
+  )
+```
+
+## 十年間家暴男性受害通報比例上升 彰化性別差距最小
+
+指標說明：男性／女性。數值越小表示差距越大。
+
+結果詮釋：比對102年與112年，台灣家暴受害者的性別比例有趨近的變化。102年多數縣市的男性／女性受害比例約為0.4；112年，多數縣市上升至0.5或0.6，彰化更達0.7，代表男女受家暴通報比例躍居接近。這可能反映男性受害增加或通報意願上升，社會對男性受害者的認知提升，使過去隱蔽的男性受暴現象得以呈現。
+
+```{r}
+
+# 讀地圖
+map_data <- st_read("/Users/abby/Desktop/DataJournalism/R4CSS-master/data/直辖市县界线/COUNTY_MOI_1140318.shp")
+
+# 整理資料、算男/女比（只抓102和112年）
+gender_ratio_df <- df %>%
+  filter(Age == "總計", Year %in% c(102, 112)) %>%
+  group_by(City, Year, Gender) %>%
+  summarise(Count = sum(Count), .groups = "drop") %>%
+  pivot_wider(names_from = Gender, values_from = Count) %>%
+  mutate(Ratio = 男 / 女)
+
+# 合併地圖並微調數值位置避免擠在一起
+map_df <- map_data %>%
+  left_join(gender_ratio_df, by = c("COUNTYNAME" = "City")) %>%
+  mutate(
+    centroid = st_centroid(geometry),
+    coord_x = st_coordinates(centroid)[, 1],
+    coord_y = st_coordinates(centroid)[, 2],
+    label_x = ifelse(COUNTYNAME == "嘉義縣", coord_x + 0.15, coord_x),
+    label_y = ifelse(COUNTYNAME == "新北市", coord_y - 0.1, coord_y)
+  )
+
+# 畫圖
+library(shadowtext)
+ggplot(map_df) +
+  geom_sf(aes(fill = Ratio), color = "white") +
+  geom_shadowtext(
+    aes(x = label_x, y = label_y, label = round(Ratio, 1),size=1),
+    color = "white", bg.color = "black",
+    size = 2.5, fontface = "bold"
+  ) +
+  scale_fill_gradient(low = "red", high = "lightgrey") +
+  facet_wrap(~Year) +
+  coord_sf(xlim = c(119.5, 122.2), ylim = c(21.7, 25.5), expand = FALSE) +
+  theme_void() +
+  theme(strip.text = element_text(size = 12, face = "bold"))+
+  labs(title = "各縣市家暴通報受害者性別比（男／女）", fill = "性別比")+
+  theme(text = element_text(family = "STHeitiTC-Light")) 
+```
+
+## 老人遭家暴通報數增加 防治之路怎麼走
+
+結果詮釋：從97年到112年，整體家暴通報數明顯成長，主因來自中年與老年族群的通報增長。其中老年人（65歲以上）自100年起通報數穩定上升，中年通報數則在102年開始超過壯年通報數。這顯示人口老化與家庭結構變遷可能加劇高齡者的受暴風險，例如照顧壓力失衡、經濟依賴、身心退化等因素。
+
+```{r}
+# 整理資料
+age_trend_df <- df %>%
+  filter(Gender == "總計",Age != "不詳", Year %in% 97:112) %>%
+  filter(Age != "不詳")%>%
+  group_by(Year, Age) %>%
+  summarise(Total = sum(Count), .groups = "drop") %>%
+  mutate(AgeGroup = ordered(Age, 
+    levels=c("0-未滿6歲", "6-未滿12歲",
+    "12-未滿18歲","18-未滿24歲", "24-未滿30歲",
+    "30-未滿40歲", "40-未滿50歲", "50-未滿65歲",
+    "65歲以上","總計"),
+    label = c("幼年（0-11）", "幼年（0-11）",
+    "青年(12-23)","青年(12-23)", 
+    "壯年(24-39)","壯年(24-39)",
+    "中年(40-64)", "中年(40-64)",
+    "老年(65以上)","總計"))) %>%
+  group_by(Year, AgeGroup) %>%
+  summarise(Total = sum(Total), .groups = "drop")
+
+# 畫圖
+ggplot(age_trend_df, aes(x = Year, y = Total, color = AgeGroup)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 1.5) +
+  scale_color_manual(values = c(
+  "幼年（0-11）" = "#475ED1",
+  "青年(12-23)" = "#1DC9A4",
+  "壯年(24-39)" = "#F9C31F",
+  "中年(40-64)" = "#F97A1F",
+  "老年(65以上)" = "#F9D2DB",
+  "總計" = "#F6423C"
+)) +
+  theme_minimal() +
+  labs(
+    title = "各年齡層家暴受害者通報數趨勢",
+    x = "年份", y = "通報人數", color = "年齡層"
+  ) +
+  theme(text = element_text(family = "STHeitiTC-Light"))+
+  scale_y_continuous(labels = scales::comma)+
+  scale_x_continuous(breaks = 97:112)
+```

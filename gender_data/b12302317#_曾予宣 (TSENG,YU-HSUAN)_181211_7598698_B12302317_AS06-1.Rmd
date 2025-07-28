@@ -1,0 +1,204 @@
+---
+title: "B12302317_AS06"
+output: html_document
+date: "2025-05-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+required_packages <- c("readr", "tidyverse", "dplyr", "ggplot2", "sf", "tidyr")
+for(pkg in required_packages) {
+  if(!require(pkg, character.only = TRUE)) {
+    install.packages(pkg)
+    library(pkg, character.only = TRUE)
+  }
+}
+
+```
+
+# 六都性別比十年下滑，非都會區未跟進反轉趨勢
+
+### **詮釋資料**
+
+-   **name**：十五歲以上人口教育程度
+
+-   **href**：<https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=MUwvQW33tN8mhRl94KFn2g%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40>
+
+-   **dep：**內政部
+
+-   **cat1**：教育、媒體與文化
+
+-   **cat2**：教育
+
+-   **複分類**：年齡別、年度別、性別、教育程度別、縣市別
+
+### Findings
+
+*從性別比地圖可見，113 年多數縣市地圖仍以男性人數略多為主；然而折線趨勢顯示，六都的大學人口性別比在近十年簡穩定下降，女性占比有逐步上升的趨勢。對此此可能反映出都會區在性別結構轉變上的領先，而非都會區是否會出現相同趨勢，仍需觀察。*
+
+
+## 資料清理
+
+```{r}
+library(readr)
+library(tidyverse)
+data <- read_csv("C:/Users/clair/Downloads/十五歲以上人口教育程度-20250506.csv", col_names = FALSE)
+
+
+data <- data[-c(1:3), ]
+
+
+new_names <- paste(data[1, ], data[2, ], data[3, ], sep = "_") %>%
+  str_replace_all("NA", "") %>%
+  str_replace_all("_+", "_") %>%   
+  str_replace_all("^_|_$", "") %>% 
+  str_trim()
+
+
+data <- data[-c(1:3), ]
+colnames(data) <- new_names
+
+
+colnames(data)[1] <- "year"
+
+
+data_long <- data %>%
+  pivot_longer(
+    cols = -year,                     
+    names_to = "id",                  
+    values_to = "population"          
+  ) %>%
+  separate(
+    id, into = c("county", "education", "gender"), sep = "_"
+  ) %>%
+  mutate(
+    gender = if_else(is.na(gender) & county %in% c("男", "女"), county, gender),
+    county = if_else(county %in% c("男", "女"), NA_character_, county)
+  ) %>% 
+    mutate(
+    gender = if_else(is.na(gender) & county == "大學", "大學", gender),
+    county = if_else(county == "大學", NA_character_, county)
+  ) %>%
+    rename(id = gender) %>%
+    fill(county, .direction = "down") %>%
+    select(-education)
+
+data_long$id[data_long$id == "總計"] <- "15歲以上人口"
+
+
+
+
+```
+
+## 各縣市指標（性別比）
+
+### 性別比計算
+
+篩選出113年大學人口依照性別區分的資料，依county和id(性別)分組後加總每個縣市男女大學人口數
+
+計算性別比(sex_ratio)：男生人口／女生人口
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+
+data_long <- data_long %>%
+  mutate(population = as.numeric(gsub(",", "", population)))
+gender_ratio <- data_long %>%
+  filter(id %in% c("男", "女"), year == "113年") %>%
+  group_by(county, id) %>%
+  summarise(population = sum(population), .groups = "drop") %>%
+  pivot_wider(
+    names_from = id,
+    values_from = population
+  ) %>%
+  mutate(sex_ratio = 男 / 女)
+
+
+```
+
+```{r city_trend}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+
+six_cities <- c("臺北市", "新北市", "桃園市", "臺中市", "臺南市", "高雄市")
+
+
+data_clean <- data_long %>%
+  filter(county %in% six_cities, id %in% c("男", "女")) %>%
+  mutate(population = as.numeric(gsub(",", "", population)))
+
+
+gender_trend <- data_clean %>%
+  group_by(year, county, id) %>%
+  summarise(population = sum(population, na.rm = TRUE), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = id, values_from = population) %>%
+  mutate(sex_ratio = `男` / `女`)  
+
+print(gender_trend)
+```
+
+```{r trend_plot}
+
+gender_trend$year <- as.numeric(gsub("年", "", gender_trend$year))
+
+
+ggplot(gender_trend, aes(x = year, y = sex_ratio, color = county, group = county)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  scale_y_continuous(name = "性別比（男／女）", limits = c(0.8, 1.05)) +
+  labs(
+    title = "六都近十年大學人口性別比變化",
+    x = "年度", 
+    color = "縣市"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    legend.position = "right"
+  )
+```
+
+```{r}
+
+library(sf)
+library(dplyr)
+library(ggplot2)
+
+knitr::opts_knit$set(root.dir = "data/shapefiles")
+
+county_sf <- sf::st_read("C:/Users/clair/Downloads/R4CSS-master_5/R4CSS-master/data/shapefiles/COUNTY_MOI_1090820.shp")
+
+county_simp <- st_simplify(county_sf, dTolerance = 100)
+
+gender_ratio$county <- gsub("台", "臺", gender_ratio$county)
+map_data <- right_join(county_simp, gender_ratio, by = c("COUNTYNAME" = "county"))
+
+
+ggplot(map_data) +
+  geom_sf(aes(fill = sex_ratio), color = "white", size = 0.2) +
+  scale_fill_gradient2(
+    low = "#de2d26",     
+    mid = "#CBCBD4",     
+    high = "#3182bd",    
+    midpoint = 1,
+    name = "大學人口性別比\n（男/女）"
+  ) +
+  labs(
+    title = "113年各縣市大學人口性別比地圖",
+    caption = "資料來源：重要性別統計資料庫"
+  ) +
+    coord_sf(xlim = c(119, 123.5), ylim = c(21.5, 25.5), expand = FALSE) +
+    theme_minimal() +
+    theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "right"
+  )
+
+```

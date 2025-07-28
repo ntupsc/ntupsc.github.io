@@ -1,0 +1,103 @@
+---
+title: "全台性侵害性別失衡：從校園到職場，女性受害比例均超8成"
+author: "羅卉昀"
+date: "2025-05-05"
+output: html_document
+
+---
+
+name：性侵害事件通報被害人概況－職業分
+資料範圍：2005-2020年
+href：https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_Query.aspx?sn=Bjz1B1Ni2Qkt1Y18F3wPOQ%40%40&statsn=fgpq!QPLMgpdgsdmy1UobQ%40%40
+dep：衛生福利部
+cat1：人身安全與司法
+cat2：性侵害
+複分類：年度別，縣市別，性別，職業別
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(jsonlite)
+library(sf)
+```
+
+## df 1：2020年各縣市性侵害受害學生女性比例
+
+```{r}
+df1 <- read.csv("性侵害事件通報被害人概況－職業分-20250510.csv", skip = 2) %>%
+    mutate_at(vars(4),as.numeric) %>%
+    mutate(人數 = X109年) %>% 
+    pivot_wider(names_from = 性別, values_from = 人數) %>%
+    rename(男 = "　男", 女 = "　女") %>%
+    select(-c(職業別, X109年)) %>%
+    group_by(縣市別) %>%
+    summarise(男 = sum(男, na.rm = TRUE), 女 = sum(女, na.rm = TRUE)) %>%
+    mutate(女性占比 = 女 / (女 + 男))
+
+sf_tw <- st_read("COUNTY_MOI_1140318.shp")
+```
+
+
+## plot 1：2020年各縣市性侵害受害學生女性比例
+
+```{r}
+th <-
+  theme(
+    title = element_text(family = "Heiti TC Light"),
+    text = element_text(family = "Heiti TC Light"),
+    axis.text.y = element_text(family = "PingFang TC"),
+    axis.text.x = element_text(family = "Heiti TC Light"),
+    legend.text = element_text(family = "Heiti TC Light"),
+    plot.title = element_text(family = "Heiti TC Light", size = 15, hjust = 0.5)
+  )
+
+map_data <- sf_tw %>% left_join(df1, by = c("COUNTYNAME" = "縣市別")) 
+map_data %>%
+    ggplot() +
+    aes(fill = 女性占比) +
+    geom_sf() +
+    scale_fill_viridis_c(option = "B", direction = -1, name = "女性占比") +
+    coord_sf(xlim = c(119, 123), ylim = c(21.5, 25.5), expand = FALSE) +
+    labs(title = "2020年各縣市性侵害受害學生女性比例") +
+    theme_light() +
+    th
+```
+
+## df 2：2020年性侵害被害人職業分布
+
+
+```{r}
+df2 <- read.csv("性侵害事件通報被害人概況－職業.csv", skip = 2) %>%
+    mutate(人數 = X109年) %>%
+    mutate(人數 = gsub(",", "", 人數), 人數 = as.numeric(人數)) %>%
+    pivot_wider(names_from = 性別, values_from = 人數) %>%
+    rename(男 = "　男", 女 = "　女") %>%
+    group_by(職業別) %>%
+    summarise(男 = sum(男, na.rm = TRUE), 女 = sum(女, na.rm = TRUE)) %>%
+    filter(!(男 == 0 & 女 == 0)) %>%
+    mutate(女性占比 = 女 / (女 + 男))
+```
+
+## plot 2：2020年性侵害被害人職業分布
+
+
+```{r}
+df2 %>%
+    ggplot() +
+    aes(reorder(職業別, 女性占比), 女性占比) +
+    geom_col(fill = "salmon") +
+    coord_flip() +
+    scale_y_continuous(labels = scales::percent_format()) +
+    labs(title = "2020年性侵害被害人職業分布", x = "職業別", y = "女性占比") +
+    theme_light() +
+    th
+```
+
+
+## finding
+新聞標題：全台性侵害性別失衡：從校園到職場，女性受害比例均超8成
+根據上述兩張圖表，可發現性侵害受害者中，無論是以地區或職業區分，女性比例均普遍高於男性。從地圖上來看，不同縣市的女學生受害比例有明顯差異，可能反映不同地區的社會文化、報案意願或服務資源差異。從職業來觀察，幾乎所有職業類別的性侵害受害者中，女性都占絕大多數，僅警察是唯一女性比例低於男性的群體，可能與其職業的特殊性與權力關係有關。
+
+綜合而言，性侵害犯罪在台灣呈現明顯的性別化現象，女性是主要受害者，無論地區、職業背景如何，女性都面臨較高的性侵害風險，學生群體中的性別差異在地理上有明顯分布特徵，而職業分布則顯示幾乎所有職業的女性都面臨高風險，尤其是家庭管理者和公務人員，反映了性別不平等的普遍性。
+

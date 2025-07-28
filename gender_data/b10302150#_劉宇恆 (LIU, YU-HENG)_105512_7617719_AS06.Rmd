@@ -1,0 +1,337 @@
+---
+title: "AS06"
+author: "劉宇恆"
+date: "2025-05-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 從地方數據下手2020年女性送餐到家服務使用率更高
+
+-   **name**：送餐到家服務人數\
+
+-   **資料範圍**：2009–2020\
+
+-   **href**：<https://www.gender.ey.gov.tw/gecdb/>...\
+
+-   **def**：提供老人居家送餐服務之個案人數\
+
+-   **cat1**：健康、醫療與照顧\
+
+-   **cat2**：老人照顧\
+
+-   **複分類**：年度別、縣市別、性別、老人餐飲服務別
+
+    ```{r}
+    if (!requireNamespace("zoo", quietly = TRUE)) {
+      install.packages("zoo")
+    }
+    ```
+
+```{r}
+# 載入套件
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(zoo)
+library(sf)
+library(ggplot2)
+```
+
+```{r extract-delivery-mft, message=FALSE, warning=FALSE}
+# 載入套件
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(zoo)
+
+# 1. 讀三層表頭（第1~3列：縣市別、服務別、性別）
+hdr <- read_excel("長期照護1.0.xlsx",
+                  skip      = 0,
+                  n_max     = 3,
+                  col_names = FALSE)
+h1 <- as.character(hdr[1, ]) %>% na.locf() %>% str_trim()  # 縣市別（含「總計」）
+h2 <- as.character(hdr[2, ]) %>% na.locf() %>% str_trim()  # 服務別（含「總計」）
+h3 <- as.character(hdr[3, ])            %>% str_trim()    # 性別 (total/male/female)
+
+# 合併成欄名
+col_names <- paste(h1, h2, h3, sep = "_")
+col_names[1] <- "year"   # 第一欄改為 year
+
+# 2. 讀數值：從第4列(98年)開始
+df_raw <- read_excel("長期照護1.0.xlsx",
+                     skip      = 3,
+                     col_names = FALSE) %>%
+  .[, seq_len(length(col_names))]
+colnames(df_raw) <- col_names
+
+# 3. 清理欄名：去除全形/半形空格並移除重複
+names(df_raw) <- names(df_raw) %>%
+  str_replace_all("\u3000", "") %>% 
+  str_replace_all("\\s+", "")
+df_raw <- df_raw[, !duplicated(names(df_raw))]
+
+# 4. 選出 year 以及所有 *_送餐到家服務方式_male/female/total 這三類欄
+df_base <- df_raw %>%
+  select(
+    year,
+    matches("^[^_]+_送餐到家服務方式_(male|female|total)$")
+  )
+
+# 5. 轉型與整理
+df_summary <- df_base %>%
+  # 先把「98年」轉西元、其餘欄位轉 numeric
+  mutate(
+    year = as.integer(str_remove(year, "年")) + 1911,
+    across(-year, as.numeric)
+  ) %>%
+  # 正確拆出縣市、service、gender 三個欄
+  pivot_longer(
+    cols = -year,
+    names_to    = c("county", "service", "gender"),
+    names_pattern = "^(.*?)_(送餐到家服務方式(?:/[^_]+)?)_(male|female|total)$",
+    values_to   = "count",
+    values_drop_na = TRUE
+  ) %>%
+  # 聚合同年同縣市同性別
+  group_by(year, county, gender) %>%
+  summarise(count = sum(count, na.rm = TRUE), .groups = "drop") %>%
+  # 再展回寬表，並算 total
+  pivot_wider(
+    id_cols     = c(year, county),
+    names_from  = gender,
+    values_from = count,
+    values_fill = 0
+  ) %>%
+  mutate(total = male + female)
+
+head(df_summary)
+```
+
+```{r compute-index, message=FALSE, warning=FALSE}
+library(dplyr)
+
+# 假設 df_summary 已經有 year, county, male, female, total
+# 1. 計算性別中心化指標：>0 表示女性占優，<0 表示男性占優
+df_index <- df_summary %>% 
+  mutate(
+    index = (female - male) / (female + male)
+  )
+head(df_index)
+
+```
+
+## **說明資料結構**
+
+`year`：資料年度（西元年，原為「98年」等民國年）。
+
+`county`：縣市別。
+
+`male`：該年該縣市男性使用送餐到家服務人數。
+
+`female`：該年該縣市女性使用送餐到家服務人數。
+
+`total`：`male + female`，不分收入階層的總使用人數。
+
+```{r fullpage-map-zoom-max, fig.width=12, fig.height=16, out.width='100%', fig.align='center',  message=FALSE, warning=FALSE}
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(grid)  # for unit()
+
+# 1. 載入並整理本機縣市圖資
+shp_path <- "C:/Users/liuia/Desktop/NEW_NTU/senior_fall/2R4css/R4CSS-master/R4CSS-master/data/shapefiles/COUNTY_MOI_1090820.shp"
+taiwan_county <- st_read(shp_path, quiet = TRUE) %>%
+  rename(county = COUNTYNAME) %>%
+  mutate(county = str_replace_all(county, "臺", "台"))
+
+# 2. 準備最新年度性別中心化指標
+df_index <- df_summary %>%
+  mutate(idx = (female - male) / (female + male)) %>%
+  filter(year == max(year, na.rm = TRUE))
+
+# 3. 合併圖資與指標
+map_data <- taiwan_county %>%
+  left_join(df_index, by = "county")
+
+# 4. 手動設定放大範圍，覆蓋台灣本島極大部分
+xlim <- c(119.0, 123.0)
+ylim <- c(21.0, 26.0)
+
+# 5. 繪圖
+ggplot(map_data) +
+  geom_sf(aes(fill = idx), color = "white", size = 0.2) +
+  coord_sf(
+    xlim   = xlim,
+    ylim   = ylim,
+    expand = FALSE,
+    datum  = NA
+  ) +
+  scale_fill_gradient2(
+    low      = "#2c7bb6",
+    mid      = "#ffffbf",
+    high     = "#d7191c",
+    midpoint = 0,
+    na.value = "grey90",
+    name     = "(女性−男性)/(女性+男性)"
+  ) +
+  labs(
+    title    = paste0(max(df_index$year), " 年各縣市送餐到家服務 性別中心化指標"),
+    subtitle = "指標 >0 表示女性使用者較多；<0 表示男性使用者較多",
+    caption  = "資料來源：長期照護十年計畫1.0 ；圖資：內政部縣市圖資"
+  ) +
+  theme_void() +
+  theme(
+    plot.margin      = unit(c(0,0,0,0), "cm"),
+    plot.title       = element_text(size = 24, face = "bold", hjust = 0.5),
+    plot.subtitle    = element_text(size = 16, hjust = 0.5, margin = margin(b = 15)),
+    plot.caption     = element_text(size = 10, color = "grey40", margin = margin(t = 15)),
+    legend.position  = "bottom",
+    legend.key.width = unit(3, "cm"),
+    legend.title     = element_text(size = 12),
+    legend.text      = element_text(size = 10)
+  )
+
+
+```
+
+```{r # 第二次地圖 chunk fullpage-map-zoom-max, fig.width=12, fig.height=16, out.width='100%', fig.align='center',  message=FALSE, warning=FALSE}
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(grid)
+
+# 1. 讀本機縣市圖資
+shp_path <- "C:/Users/liuia/Desktop/NEW_NTU/senior_fall/2R4css/R4CSS-master/R4CSS-master/data/shapefiles/COUNTY_MOI_1090820.shp"
+taiwan_county <- st_read(shp_path, quiet = TRUE) %>%
+  rename(county = COUNTYNAME) %>%
+  mutate(county = str_replace_all(county, "臺", "台"))
+
+# 2. 準備最新年度性別中心化指標
+df_index <- df_summary %>%
+  mutate(idx = (female - male)/(female + male)) %>%
+  filter(year == max(year, na.rm=TRUE))
+
+# 3. 合併圖資與指標
+map_data <- taiwan_county %>%
+  left_join(df_index, by = "county")
+
+# 4. 放大至台灣本島範圍
+xlim <- c(119.0, 123.0)
+ylim <- c(21.0, 26.0)
+
+# 5. 繪製地圖
+ggplot() +
+  # 無資料區塊
+  geom_sf(data = filter(map_data, is.na(idx)),
+          fill = "black", color = "white", size = 0.2) +
+  # 有資料區塊
+  geom_sf(data = filter(map_data, !is.na(idx)),
+          aes(fill = idx), color = "white", size = 0.2) +
+  coord_sf(xlim = xlim, ylim = ylim, expand = FALSE, datum = NA) +
+  # 圖例標題直接顯示公式名稱
+  scale_fill_gradient2(
+    low      = "#2c7bb6",
+    mid      = "#ffffbf",
+    high     = "#d7191c",
+    midpoint = 0,
+    na.value = "black",
+    name     = expression("性別中心化指標"~"="~frac(female - male, female + male))
+  ) +
+  labs(
+    title   = paste0(max(df_index$year), " 年各縣市送餐到家服務 性別中心化指標"),
+    subtitle= "
+    指標 >0 表示女性使用者較多；<0 表示男性使用者較多
+    ",
+    caption = "備註：黑色區塊表示無資料；圖資：內政部縣市圖資；資料來源：長期照護十年計畫1.0"
+  ) +
+  # 在地圖右上角加上公式註記
+  annotate(
+    "text", 
+    x = 122.8, y = 25.8, 
+    label = expression("性別中心化指標"~"="~frac(female - male, female + male)),
+    hjust = 1, vjust = 1, size = 5, fontface = "italic"
+  ) +
+  theme_void() +
+  theme(
+    plot.margin       = unit(c(0,0,0,0), "cm"),
+    plot.title        = element_text(size = 24, face = "bold", hjust = 0.5),
+    plot.subtitle     = element_text(size = 16, hjust = 0.5, margin = margin(b = 15)),
+    plot.caption      = element_text(size = 10, color = "grey40", margin = margin(t = 15)),
+    legend.position   = "right",
+    legend.key.height = unit(4, "cm"),
+    legend.title      = element_text(size = 12),
+    legend.text       = element_text(size = 10)
+  )
+```
+
+```{r plot-trend-very-fine-breaks, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+
+# 資料整理（同前）
+df_trend2 <- df_summary %>%
+  group_by(year) %>%
+  summarise(
+    male   = sum(male,   na.rm = TRUE),
+    female = sum(female, na.rm = TRUE),
+    total  = sum(total,  na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  pivot_longer(
+    cols      = c(male, female, total),
+    names_to  = "category",
+    values_to = "count"
+  )
+
+max_count <- max(df_trend2$count, na.rm = TRUE)
+
+# 繪圖：手動每 1000 人一格
+ggplot(df_trend2, aes(x = year, y = count, color = category)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = df_trend2$year) +
+  scale_y_continuous(
+    breaks = seq(0, max_count, by = 1000),
+    labels = comma
+  ) +
+  scale_color_manual(
+    values = c(male = "#1f78b4", female = "#e31a1c", total = "#33a02c"),
+    labels = c(male = "男性使用人數", female = "女性使用人數", total = "總使用人數"),
+    name   = NULL
+  ) +
+  labs(
+    title    = "2009–2020 年全台送餐到家服務使用人數趨勢（每1,000人一格）",
+    x        = "年份",
+    y        = "使用人數",
+    caption  = "資料來源：長期照護十年計畫1.0"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title      = element_text(size = 16, face = "bold", hjust = 0.5),
+    axis.text.x     = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    legend.text     = element_text(size = 10),
+    plot.caption    = element_text(size = 8, color = "grey40")
+  )
+
+```
+
+## 發現與結果詮釋
+
+2020 年全台送餐到家服務的性別分布地圖揭示出數個重要觀察，其中最顯著的，是女性使用者普遍高於男性的趨勢，尤以花蓮、宜蘭、澎湖等非都會縣市最為明顯。這些地區的性別比值（女性／男性）多落在 1.2 至 1.5 之間，顯示女性長者對於居家送餐照護的依賴程度較高，可能與女性壽命較長、配偶過世後需獨居，以及女性在接受社會福利資源上具有較高主動性有關。
+
+然而，地圖中也呈現另一個相對被忽略的現象：**缺乏資料的地區幾乎都是直轄市**，包括新北市、台中市、高雄市與新竹市等人口密集城市。這些地區在圖上以黑色標示，顯示未能取得其送餐服務中按性別分層的使用人數資料。這種缺口可能反映出都市中服務提供單位較多元（如由區級、民間團體或外包系統分散執行），導致統計口徑不一致，或資料整合困難。這使得我們對於直轄市中實際使用情況的掌握相對模糊，也突顯政府在資料治理與揭露制度上的改進空間。
+
+從趨勢圖來看，自 2009 年至 2020 年，全台送餐到家服務使用人數呈現穩定且快速的成長，由約 3 萬人增加至超過 8 萬人，平均每年成長幅度近 9%。其中，女性使用者從約 1.6 萬人成長到 4.5 萬人，增速明顯快於男性（1.4 萬至 3.8 萬人），性別差距也逐年擴大。這不僅顯示整體高齡照護需求的上升，更指出女性長者是目前主要的服務受益者與潛在需求者。
+
+這些發現突顯出在推動長期照護政策，尤其是居家餐飲服務時，應更細緻地回應性別與區域間的差異。地方政府應依據實際需求調整資源配置，針對女性使用比例高的縣市增加服務點與預算投入，同時設法提升男性長者的服務參與率。更重要的是，中央與地方需協作建立一致的資料蒐集與公開標準，確保所有地區，特別是直轄市的服務資料能如實揭露，以利後續政策制定與資源配置的公平性與有效性。

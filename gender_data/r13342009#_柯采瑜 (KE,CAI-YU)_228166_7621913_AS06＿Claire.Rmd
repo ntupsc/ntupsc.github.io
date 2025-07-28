@@ -1,0 +1,199 @@
+---
+title: "A06"
+author: "Claire"
+date: "2025-05-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **AS06. Gender Data Visualization**
+
+## 第一張圖：2022年各縣市祭祀公業派下員女性比例
+
+```{r}
+library(sf)
+library(tmap)
+library(dplyr)
+library(readr)
+library(readODS)
+
+# 1. 讀取地圖
+map <- st_read("data/tw-counties.geojson.json")  # 檔名請確認無誤
+
+# 2. 讀入 ODS 檔（第1工作表 = 2022年），跳過前3列
+data <- read_ods("data/祭祀公業法人派下員統計.ods", sheet = 1, skip = 3)
+
+# 2-1確實重新命名欄位
+colnames(data) <- c("name", "法人數", "總人數", "男性", "女性", "女性比率")
+
+# 2-2移除總計列
+data <- subset(data, name != "小計")
+
+# 3. 合併地圖與資料
+map_data <- left_join(map, data, by = "name")
+# 4. 畫地圖
+library(RColorBrewer)
+
+# 建立你想要的粉紫橘色階（這裡用類似色系，如 "PuOr"，或你可以自定義顏色）
+# 或用手動方式列出 hex 色碼（依照你截圖上的配色）
+
+my_palette <- c("#fef1f1", "#fdd5d5", "#fcc7c7", "#fbabab", "#fa8f8f", "#f97474")  
+
+tm_shape(map_data) +
+  tm_polygons(
+    col = "女性比率",
+    palette = my_palette,
+    title = "女性佔比 (%)",
+    textNA = "無資料",       # 將 Missing 改為「無資料」
+    colorNA = "#eeeeee"    # 無資料區域顏色（可自訂）
+  ) +
+   tm_layout(
+  title = "2022年各縣市祭祀公業派下員女性比例",
+  title.fontface = "bold",
+  title.size = 2.8,                  # ⬅️ 加粗字體用這個參數
+  fontfamily = "PingFang TC",
+  legend.title.size = 1.2,
+  legend.text.size = 0.8
+)
+
+
+```
+
+## 第二張圖：2018–2022各縣市祭祀公業派下員的女性比率變化
+
+```{r}
+library(readODS)
+library(dplyr)
+library(ggplot2)
+
+# 年份與對應的 sheet 名
+years <- c("107", "108", "109", "110", "111")
+year_labels <- c(2018, 2019, 2020, 2021, 2022)
+
+# 建立一個空的總表
+all_data <- data.frame()
+
+# 用迴圈讀取每一年
+for (i in seq_along(years)) {
+  sheet_name <- years[i]
+  year <- year_labels[i]
+  
+  df <- read_ods("data/祭祀公業法人派下員統計.ods", sheet = sheet_name, skip = 3)
+  colnames(df) <- c("name", "法人數", "總人數", "男性", "女性", "女性比率")
+  df <- df[df$name != "小計", ]
+  df$year <- year
+  all_data <- rbind(all_data, df)
+}
+
+# 選擇要畫的縣市（你可自由調整）
+selected_cities <- c("Taipei City", "New Taipei City", "Taichung City", "Tainan City", "Kaohsiung City","Taoyuan")
+
+# 過濾資料
+plot_data <- all_data %>% filter(name %in% selected_cities)
+
+# 畫折線圖
+macaron_colors <- c(
+  "#FFD1DC",  # 馬卡龍粉
+  "#AEE1F9",  # 馬卡龍藍
+  "#C1E1C1",  # 馬卡龍綠
+  "#FFF4B2",  # 馬卡龍黃
+  "#E6C1E6",  # 馬卡龍紫
+  "#FFDAC1"   # 馬卡龍橘粉
+)
+ggplot(plot_data, aes(x = year, y = `女性比率`, color = name)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+    scale_color_manual(values = macaron_colors) +
+  labs(
+    title = "2018–2022年祭祀公業派下員女性比例變化",
+    x = "年份", y = "女性比率 (%)", color = "縣市"
+  ) +
+  theme_minimal(base_family = "PingFang TC") +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    legend.position = "right"
+  )
+
+```
+
+## 第三張圖：2018–2022各縣市祭祀公業派下員的女性比率變化（看各縣市個別趨勢）
+
+```{r}
+library(readODS)
+library(dplyr)
+library(ggplot2)
+
+# 年份與對應的 sheet 名
+years <- c("107", "108", "109", "110", "111")
+year_labels <- c(2018, 2019, 2020, 2021, 2022)
+
+# 建立一個空的總表
+all_data <- data.frame()
+
+# 用迴圈讀取每一年
+for (i in seq_along(years)) {
+  sheet_name <- years[i]
+  year <- year_labels[i]
+  
+  df <- read_ods("data/祭祀公業法人派下員統計.ods", sheet = sheet_name, skip = 3)
+  colnames(df) <- c("name", "法人數", "總人數", "男性", "女性", "女性比率")
+  df <- df[df$name != "小計", ]
+  df$year <- year
+  all_data <- rbind(all_data, df)
+}
+
+# 選擇要畫的縣市（你可自由調整）
+selected_cities <- c("Taipei City", "New Taipei City", "Taichung City", "Tainan City", "Kaohsiung City","Taoyuan")
+
+# 過濾資料
+plot_data <- all_data %>% filter(name %in% selected_cities)
+
+# 畫折線圖
+macaron_colors <- c(
+  "#FFD1DC",  # 馬卡龍粉
+  "#AEE1F9",  # 馬卡龍藍
+  "#C1E1C1",  # 馬卡龍綠
+  "#FFF4B2",  # 馬卡龍黃
+  "#E6C1E6",  # 馬卡龍紫
+  "#FFDAC1"   # 馬卡龍橘粉
+)
+ggplot(plot_data, aes(x = year, y = `女性比率`, color = name)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  scale_color_manual(values = macaron_colors) +
+  facet_wrap(~ name) +
+  labs(
+    title = "2018–2022年祭祀公業派下員女性比例變化",
+    x = "年份", y = "女性比率 (%)", color = "縣市"
+  ) +
+  theme_minimal(base_family = "PingFang TC") +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    strip.text = element_text(face = "bold", size = 11),
+    legend.position = "none"
+  )
+
+```
+
+## **解釋：**
+
+資料新聞標題：祭祀公業台中女性比例全台最高，資料看性別差距逐年變化
+
+詮釋欄位：
+
+-   **name**：祭祀公業法人派下員統計
+-   **資料範圍**：2018–2022
+-   **href**：<https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=BFvp18cp2BsfqmG8OxvDBw%40%40&d=194q2o4!otzoYO!8OAMYew%40%40>
+-   **def**：統計全國祭祀公業法人數量，按縣市、性別與年份區分
+-   **cat1**：縣市
+-   **cat2**：性別
+-   **複分類**：年度（2018–2022）、縣市別女性派下員佔比（%）
+
+Findings：
+
+根據2018年至2022年祭祀公業派下員統計資料，各縣市女性參與比例普遍偏低，皆在從事祭祀公業總人口20%以下，但呈現穩定上升趨勢。2022年以台中市女性佔比最高，達21.9%，其餘如新北市、臺北市也突破16%，顯示人口密集或城市化地區女性參與度相對較高。相較之下，苗栗、澎湖等地則明顯偏低。從時間趨勢來看，2020年起多數縣市女性佔比快速上升，推測可能與性別政策或制度調整有關。儘管性別比例仍明顯失衡，但女性參與祭祀公業的空間逐年擴大，呈現逐年增高的發展趨勢。
+
+另外，2021 年之前此項統計由內政部民政司負責，2022 年起轉由宗教及禮制司接手，政府開始重視宗教作為專業政策領域。

@@ -1,0 +1,286 @@
+---
+title: "十一周新聞作業"
+author: "TING"
+date: "2025-05-09"
+output: html_document
+---
+
+# 大專校院環境相關科系(所)教師人數
+
+資料範圍：2008–2024，台灣本島所有縣市行政區
+href：https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_Query.aspx?sn=Q35gsibXbGz4bGJ0y5epyg%40%40&statsn=Ryc4qEyv%246QZ7UyL3mrDvA%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40
+
+def：女性環境相關科系(所)教師占比
+
+cat1：環境、能源與科技
+
+cat2：環境、能源與科技之教育
+
+複分類：環境、能源與科技領域教師
+
+```{r setup, include=FALSE}
+
+library(readxl)
+library(dplyr)
+library(tidyr)
+```
+
+### 清理資料
+```{r}
+
+raw <- read_excel("D:/200學業/210.1新聞所/新聞資訊分析資料/第十二周作業/大專校院環境相關科系(所)教師人數-20250509_xlsx.xlsx", skip = 2, col_names = FALSE)
+
+#先整理資料，表格超亂
+
+# 設定欄名：第 2 列是性別，第 3 列是設立別
+gender_row <- as.character(raw[2, ])
+school_row <- as.character(raw[3, ])
+
+# 把 NA 補成空字串
+gender_row[is.na(gender_row)] <- ""
+school_row[is.na(school_row)] <- ""
+
+# 合併為欄名
+colnames(raw) <- make.unique(paste0(gender_row, "_", school_row))
+
+# 保留第 5 列（97 學年度）以後的資料
+data <- raw[-c(1:4), ] #也順便接受raw的欄位
+
+# 加入年份欄位（從 97 學年度開始） 後面的補充也不要了
+
+# 保留第 5～21 列（共 17 年）
+data <- raw %>% 
+  slice(5:21) %>% 
+  mutate(year = 97:113 + 1911)
+
+#發現最後一行也怪怪
+data <- data[1:16, ]
+
+# 整成 tidy 格式
+data_long <- data %>%
+  pivot_longer(cols = -year, names_to = "group", values_to = "count") %>%
+  separate(group, into = c("gender", "school_type"), sep = "_") %>%
+  mutate(count = as.numeric(count))
+
+#把gender的na補上
+
+data_long <- data_long %>%
+  mutate(gender = na_if(gender, "")) %>%  # 把空字串變成 NA
+  fill(gender, .direction = "down")       # 再往下填補 NA
+```
+
+### 接著畫折線圖
+```{r}
+
+library(showtext)
+library(ggplot2)
+library(stringr)
+
+# 啟用中文字型支援（微軟正黑體）
+font_add("cw", "msjh.ttc")  # Windows 通常可用
+showtext_auto()
+
+# 整理資料
+plot_data <- data_long %>%
+  filter(school_type == "總計") %>%
+  group_by(year, gender) %>%
+  summarise(total = sum(count, na.rm = TRUE), .groups = "drop")
+
+total_line <- plot_data %>%
+  group_by(year) %>%
+  summarise(total = sum(total), .groups = "drop") %>%
+  mutate(gender = "全部")
+
+# 合併並處理全形空格
+plot_all <- bind_rows(plot_data, total_line) %>%
+  mutate(
+    gender = str_replace_all(gender, "\u3000", ""),
+    gender = trimws(as.character(gender))
+  )
+
+# 畫圖物件（指定中文字型）
+p <- ggplot(plot_all, aes(x = year, y = total, color = gender)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("男" = "steelblue", "女" = "darkred", "全部" = "black")) +
+  labs(title = "歷年大專院校環境科系教師人數變化",
+       x = "年份", y = "教師人數", color = "性別") +
+  theme_minimal(base_family = "cw")  # 中文字型設定
+
+print(p)
+
+# 儲存 PDF 圖檔
+ggsave("D:\\200學業\\210.1新聞所\\新聞資訊分析資料\\第十二周作業\\教師人數變化圖.pdf",
+       plot = p, device = cairo_pdf, width = 8, height = 5, dpi = 300)
+
+
+```
+
+### 清理資料計算公私立男女比
+
+```{r}
+library(stringr)
+
+#處理掉全部的空格
+data_clean <- data_long %>%
+  mutate(
+    gender = str_replace_all(gender, "\u3000", ""),           # 去掉全形空格
+    gender = trimws(gender),                                  # 去掉左右空白
+    school_type = str_replace_all(school_type, "\u3000", ""), # 處理 school_type 的全形空格
+    school_type = trimws(school_type),                        # 處理左右空白
+    school_type = str_replace(school_type, "\\.1$", "")       # 去掉 .1
+  )
+
+# 計算每年每 school_type 的男女總數
+gender_by_type <- data_clean %>%
+  filter(school_type %in% c("公立", "私立")) %>%
+  group_by(year, school_type, gender) %>%
+  summarise(total = sum(count, na.rm = TRUE), .groups = "drop")
+
+# 轉寬格式（欄位變成男、女）
+gender_wide <- gender_by_type %>%
+  pivot_wider(names_from = gender, values_from = total)
+
+# 計算女性占比
+gender_ratio_by_type <- gender_wide %>%
+  mutate(
+    female_ratio = 女 / (男 + 女)
+  )
+```
+
+
+### 畫折線圖
+
+```{r}
+library(ggplot2)
+library(showtext)
+
+
+# 中文支援：微軟正黑體
+font_add("cw", "msjh.ttc")
+showtext_auto()
+
+# 畫圖物件
+p2 <- ggplot(gender_ratio_by_type, aes(x = year, y = female_ratio, color = school_type)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c("公立" = "darkgreen", "私立" = "orange")) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    title = "女教師占比：公私立大專院校環境相關科系",
+    x = "年份", y = "女性教師占比", color = "學校類型"
+  ) +
+  theme_minimal(base_family = "cw")
+
+
+print(p2)
+
+ggsave("D:\\200學業\\210.1新聞所\\新聞資訊分析資料\\第十二周作業\\女教師占比_公私立比較.pdf",
+       plot = p2, device = cairo_pdf, width = 8, height = 5, dpi = 300)
+
+```
+
+### 清理地圖準備接地圖
+
+```{r}
+# 載入資料（不帶欄名）
+raw <- read_excel("D:\\200學業\\210.1新聞所\\新聞資訊分析資料\\第十二周作業\\大專校院環境相關科系(所)教師人數113年_xlsx.xlsx", skip = 1,
+                  col_names = FALSE)
+
+
+# 擷取對應的 row（性別、縣市、數字）
+gender_row <- raw[3, ]
+county_row <- raw[4, ]
+count_row  <- raw[5, ]
+
+# 擷取男老師部分（第 3~23 欄）
+male_df <- tibble(
+  county = as.character(unlist(county_row[3:23])),
+  gender = "男",
+  count = as.numeric(unlist(count_row[3:23]))
+)
+
+# 擷取女老師部分（第 25~47 欄）
+female_df <- tibble(
+  county = as.character(unlist(county_row[25:47])),
+  gender = "女",
+  count = as.numeric(unlist(count_row[25:47]))
+)
+
+# 合併成 tidy 格式
+env_teachers_113 <- bind_rows(male_df, female_df) %>%
+  filter(!is.na(county) & !is.na(count)) %>%
+  mutate(county = trimws(county), gender = trimws(gender))
+
+env_teachers_113 <- env_teachers_113 %>%
+  mutate(count = ifelse(is.na(count), 0, count))
+
+
+```
+### 接地圖
+
+```{r}
+
+# 轉寬格式並計算女占比
+female_ratio_df <- env_teachers_113 %>%
+  pivot_wider(names_from = gender, values_from = count, values_fill = 0) %>%
+  mutate(
+    female_ratio = 女 / (男 + 女)
+  )
+
+female_ratio_df <- female_ratio_df[1:15, ]
+
+library(sf)
+library(sf)
+
+#引入台灣地圖圖資
+taiwan_map <- st_read("D:/200學業/210.1新聞所/新聞資訊分析資料/第十二周作業/縣市界_97TM2.shp",
+                      options = "ENCODING=BIG5")
+
+#names(taiwan_map)
+#unique(taiwan_map$COUNTYNAME)  # 或其他像是 COUNTY、CNAME 等欄位名
+
+```
+
+### 畫地圖
+
+```{r}
+
+library(scales)
+
+
+# 字型支援
+font_add("cw", "msjh.ttc")
+showtext_auto()
+
+
+
+# 3. 合併地圖與女教師占比
+map_data <- taiwan_map %>%
+  mutate(countyname = trimws(countyname)) %>%
+  left_join(female_ratio_df, by = c("countyname" = "county"))
+
+# 4. 畫地圖
+ggplot(map_data) +
+  geom_sf(aes(fill = female_ratio), color = "white") +
+  geom_sf_text(aes(label = percent(female_ratio, accuracy = 1)),
+               size = 3, family = "cw") +
+  scale_fill_viridis_c(option = "plasma", labels = percent) +
+  labs(
+    title = "各縣市女教師占比（環境相關科系）",
+    fill = "女占比"
+  ) +
+  theme_minimal(base_family = "cw")
+
+
+# 儲存為 PDF
+ggsave("D:/200學業/210.1新聞所/新聞資訊分析資料/第十二周作業/女教師占比地圖.pdf",
+       width = 8, height = 6, dpi = 300, device = cairo_pdf)
+```
+
+
+本圖展示 113 學年度全台各縣市環境相關科系中，女性教師佔所有教師人數的比例（女教師人數 / 總教師人數），藉此觀察性別在不同地區的分布情形。數據來源為教育部提供之統計資料，並依據「中華民國學科標準分類（第5次修正）」中所屬的環境學門與環境工程學類彙整而成。
+
+地圖依縣市為單位，顏色越偏紫代表女教師占比越低，越偏黃則代表占比越高，並於各縣市標示實際百分比，顯示為灰色的地區則是缺乏資料。
+
+備註：從 106 學年度（2017年）開始，統計資料依據最新版的《學科標準分類（第5次修正）》。環境相關科系代碼包括：052環境學門以及07121環境工程細學類，包含生物科技、環境工程、海洋等等；然而大氣、地質、地理等不算在其中。

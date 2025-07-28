@@ -1,0 +1,142 @@
+---
+title: "AS06_gender_b11704028吳昕祐"
+author: "吳昕祐"
+date: "2025-05-11"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 台灣各縣市女性日間照顧服務需求人數佔總人數比例：女性需求高於男性，近兩年內東部與南部比例上升
+name：日間照顧服務個案人數
+資料範圍：2022-2024年
+href：https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=JhXdQCIVuVWrqa3tusWKbg%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40
+def:長期照顧十年計畫2.0－日間照顧服務服務個案人數(110年以後)
+cat1 縣市別
+cat2 性別、長照需要等級
+
+
+```{r}
+library(tidyverse)
+library(sf)
+library(tmap)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(jsonlite)
+
+# 1. 讀 JSON + 整理資料
+df <- fromJSON("/Users/hsinyu/Desktop/homecare20.json") %>%
+  mutate(
+    gender = Category1Title,
+    district = Category2Title,
+    level = Category3Title,
+    year = Period / 100,
+    number = Val
+  ) %>%
+  select(gender, district, level, year, number) %>%
+  filter(grepl("總計", level)) %>%
+  slice(-1)
+
+# 2. 製作 male_table
+male_table <- df %>%
+  filter(gender == "男") %>%
+  select(district, year, number) %>%
+  rename(number_male = number)
+
+# 3. 計算 male_proportion + female_proportion
+df1 <- df %>%
+  filter(gender == "總計") %>%
+  left_join(male_table, by = c("district", "year")) %>%
+  rename(number_total = number) %>%
+  mutate(
+    male_proportion = number_male / number_total,
+    male_proportion = ifelse(is.nan(male_proportion), 0, male_proportion),
+    female_proportion = 1 - male_proportion
+  ) %>%
+  drop_na(female_proportion) %>%
+  mutate(district = gsub("台", "臺", district))  # 修正台/臺
+
+# 4. 讀入 township 鄉鎮圖
+township <- st_read("/Users/hsinyu/Downloads/taiwan_township_1140318/TOWN_MOI_1140318.shp")
+
+# 5. 繪製110年度
+df110 <- df1 %>% filter(year == 110)
+
+county_map_110 <- township %>%
+  group_by(COUNTYNAME) %>%
+  summarise(geometry = st_union(geometry), .groups = 'drop') %>%
+  left_join(df110 %>% select(district, female_proportion),
+            by = c("COUNTYNAME" = "district"))
+
+p110 <- ggplot(county_map_110) +
+  geom_sf(aes(fill = female_proportion), color = NA) +
+  scale_fill_gradient(low = "white", high = "#141F52",limits = c(0.2, 0.75)) +
+  coord_sf(xlim = c(119, 123.5), ylim = c(21.5, 27), expand = FALSE) +
+  ggtitle("110 年度台灣縣市層級長照需求女性比例") +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Heiti TC Light"),
+    title = element_text(family = "Heiti TC Light")
+  )
+
+# 6. 繪製112年度
+df112 <- df1 %>% filter(year == 112)
+
+county_map_112 <- township %>%
+  group_by(COUNTYNAME) %>%
+  summarise(geometry = st_union(geometry), .groups = 'drop') %>%
+  left_join(df112 %>% select(district, female_proportion),
+            by = c("COUNTYNAME" = "district"))
+
+p112 <- ggplot(county_map_112) +
+  geom_sf(aes(fill = female_proportion), color = NA) +
+  scale_fill_gradient(low = "white", high = "#141F52",limits = c(0.2, 0.75)) +
+  coord_sf(xlim = c(119, 123.5), ylim = c(21.5, 27), expand = FALSE) +
+  ggtitle("112 年度台灣縣市層級長照需求女性比例") +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Heiti TC Light"),
+    title = element_text(family = "Heiti TC Light")
+  )
+
+# 7. 顯示結果
+print(p110)
+print(p112)
+
+library(ggplot2)
+library(dplyr)
+
+# 選擇 110年 + 112年資料
+df_bar <- df1 %>%
+  filter(year %in% c(110, 112)) %>%
+  select(district, year, female_proportion) %>%
+  mutate(year = as.factor(year))   # year 改成 factor 方便 ggplot 顏色分組
+
+# 畫長條圖
+ggplot(df_bar, aes(x = reorder(district, -female_proportion), 
+                   y = female_proportion, 
+                   fill = year)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("#F97A1F", "#F9C31F"), 
+                    name = "年度",
+                    labels = c("110年", "112年")) +
+  labs(title = "台灣22縣市110與112年長照女性比例比較",
+       x = "縣市",
+       y = "女性比例") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, family = "Heiti TC Light"),
+    text = element_text(family = "Heiti TC Light"),
+    title = element_text(family = "Heiti TC Light")
+  )
+
+```
+##結果詮釋
+
+
+從長條圖可得知，台灣整體依長照需求來看（不分程度）除連江縣以外，皆以女性高出男性為主。由110年以及112年縣市層級的面量圖可知，在110年時，大台北地區、新竹縣以及中部為日間長照女性比例較高的地區，然後到了112年整體的比例呈現移轉的趨勢大台北地區雖然也是較高，卻開始下降，來到與男性相當的水準，執得注意的是，東部地區如花蓮明顯上升，呈現相同趨勢的還有嘉義縣。而新竹市則呈現一直較高的數據。
+
+不過，若只有這則資料，尚無法解釋過多資訊，若能夠串接人口組合資料（獨居、單親、婚姻狀態），將會有更好的解釋能力。

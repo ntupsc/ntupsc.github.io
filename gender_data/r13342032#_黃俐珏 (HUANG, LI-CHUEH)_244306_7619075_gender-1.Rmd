@@ -1,0 +1,102 @@
+---
+title: "新住民子女就讀國中小學生人數分析"
+output: html_document
+date: "2025-05-11"
+---
+## 多元台灣：新住民子女都來自哪裡？花蓮竟然是男女比例最平均的地方！
+
+name：新住民子女就讀國中小學生人數(縣市別)  
+資料範圍：97年-113年  
+href：https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=%24Gd6RbRU4aZ6x6hH7jMEnw%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40  
+dep：教育部  
+cat1：教育、媒體與文化  
+cat2：教育  
+複分類：年度別，縣市別，教育階段，國籍別，性別，年級  
+
+結果詮釋：根據圖表一可知全台國中小新住民子女皆為男生人數>女生人數，其中性別比最平均的是花蓮，第二名是高雄（性別比以女性/男性計算）。  
+從圖表二可發現目前大部分的新住民子女還是來自大陸、越南和印尼，其中，越南籍新住民子女的人數在2010年超越大陸籍新住民子女，又在2016-2017年左右回落，維持在第二名的位置。整體而言，新住民子女總人數在2014-2015達到頂峰，之後持續滑落。根據新聞報導，其原因可能包括少子化趨勢、跨國婚姻數量減少，以及COVID-19疫情影響。  
+
+
+```{r}
+library(jsonlite)
+data <- fromJSON("xinzhumin.json")
+str(data)
+```
+```{r}
+library(dplyr)
+library(tidyr)
+
+gender_ratio <- data %>%
+  filter(Category1Title %in% c("男", "女")) %>%
+  filter(Category2Title == "國中小")%>%
+  group_by(Category3Title, Category1Title) %>%
+  
+  summarise(total = sum(Val), .groups = "drop") %>%
+  pivot_wider(names_from = Category1Title, values_from = total) %>%
+  mutate(FM_ratio = 女 / 男,
+         Region = Category3Title)  # 加一個欄位叫 Region 用來合併
+
+```
+
+```{r}
+library(sf)
+library(ggplot2)
+library(dplyr)
+library(viridis)
+
+# 載入 Shapefile
+
+
+# 讀取 Shapefile，並處理字符編碼
+sf_tpe <- st_read(dsn = "113年12月行政區人口統計_縣市_SHP", 
+                  layer = "113年12月行政區人口統計_縣市", quiet = T) %>%
+  mutate(across(where(is.character), ~iconv(., from = "BIG5", to = "UTF8"))) 
+
+# 處理縣市名稱一致性
+sf_tpe$Region <- gsub("臺", "台", sf_tpe$COUNTY)
+gender_ratio$Region <- gsub("臺", "台", gender_ratio$Region)
+
+map_merged <- left_join(sf_tpe, gender_ratio, by = "Region")
+
+
+# 繪製地圖
+ggplot(map_merged) +
+  geom_sf(aes(fill = FM_ratio)) +
+  scale_fill_viridis_c(option = "plasma", na.value = "grey90", direction = -1) +
+  labs(title = "台灣各縣市新住民子女就讀國中小學生——女性／男性比例", fill = "女／男") +
+  theme_minimal()+
+  theme(
+    text = element_text(family = "Heiti TC Light"),   # 設置所有文字的字體
+    title = element_text(family = "Heiti TC Light")   # 設置標題的字體
+  )
+
+
+```
+```{r}
+nationality <- fromJSON("NIE_JE_nationality.json")
+str(nationality)
+```
+```{r}
+nationality_filtered<- nationality  %>%
+  filter(
+    Category1Title == "總計",
+    Category2Title == "國中小",
+    Category3Title != "總計"
+  ) %>%
+  mutate(Year = (Period / 100) + 1911)
+
+
+# 步驟 3：畫圖
+ggplot(nationality_filtered, aes(x = Year, y = Val, color = Category3Title)) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(breaks = seq(2000, 2025, by = 3)) +
+  labs(
+    title = "新住民子女國中小學生人數 — 各國籍歷年變化",
+    x = "Year",
+    y = "Number of Students",
+    color = "Nationality"
+  ) +
+  theme_minimal() +
+  theme(text = element_text(family = "Heiti TC Light"))  # 可選字體設定
+
+```

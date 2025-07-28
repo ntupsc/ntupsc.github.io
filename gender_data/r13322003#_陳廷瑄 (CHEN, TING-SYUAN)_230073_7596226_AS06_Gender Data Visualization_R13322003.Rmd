@@ -1,0 +1,164 @@
+---
+title: "AS06"
+author: "陳廷瑄"
+date: "2025-05-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## **〈女性參政路漫長〉全台社區發展協會理事長女性比例仍低，北市、高市略見成長趨勢**
+
+### **(一) 資料基本介紹**
+
+1.  **name：社區發展協會理事長人數**
+2.  **資料範圍：2011年\~2023年**
+3.  **href: <https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=vBL%24rhWHwjYaPMGYcO4hzw%40%40&d=194q2o4!otzoYO!8OAMYew%40%40>**
+4.  **dep：衛生福利部**
+5.  **cat1：權力、決策與影響力**
+6.  **cat2：政治參與**
+7.  **複分類：年度別，性別，縣市別**
+
+### **(二) 下載套件**
+
+```{r warning=FALSE}
+library(pacman)
+p_load(tidyverse, bruceR, sf , scales, patchwork, ggrepel, plotly)
+```
+
+### **(三) 匯入資料**
+
+```{r warning=FALSE}
+dta <- import("C:\\Users\\User\\Desktop\\R4CSS-master\\AS06\\理事長數-20250505.xlsx") %>% 
+  #mutate(across(C( `100年`:`112年`), as.numeric))失效，先用str(dta)確定資料型態
+  mutate(`100年` = as.numeric(`100年`),
+         `101年` = as.numeric(`101年`),
+         `102年` = as.numeric(`102年`),
+         `103年` = as.numeric(`103年`),
+         `104年` = as.numeric(`104年`),
+         `105年` = as.numeric(`105年`),
+         `106年` = as.numeric(`106年`),
+         `111年` = as.numeric(`111年`))
+```
+
+### **(四)轉資料**
+
+**繪製地圖資料時，因為要跟地圖資料串聯，必須讓資料只有22列(縣市)。**
+
+```{r warning=FALSE}
+dta_longe <-dta %>%    
+  pivot_longer(cols = 3:ncol(.), names_to = "年份", values_to = "n")
+  
+dta_final <- dta_longe  %>% 
+  mutate(欄位名 = paste0(性別, "_", 年份)) %>%  # 合併為欄位名稱
+  select(縣市別, 欄位名, n) %>%
+  pivot_wider(names_from = 欄位名, values_from = n) %>% 
+  setNames(c("city", paste0("male_", 100:112), paste0("female_", 100:112))) %>% 
+  #select(city, contains(cc("100"))) %>% 
+  add({
+    ratio_100 = female_100/(male_100+female_100)
+    ratio_101 = female_101/(male_101+female_101)
+    ratio_102 = female_102/(male_102+female_102)
+    ratio_103 = female_103/(male_103+female_103)
+    ratio_104 = female_104/(male_104+female_104)
+    ratio_105 = female_105/(male_105+female_105)
+    ratio_106 = female_106/(male_106+female_106)
+    ratio_107 = female_107/(male_107+female_107)
+    ratio_108 = female_108/(male_108+female_108)
+    ratio_109 = female_109/(male_109+female_109)
+    ratio_110 = female_110/(male_110+female_110)
+    ratio_111 = female_111/(male_111+female_111)
+    ratio_112 = female_112/(male_112+female_112)
+    male_sum = .sum("male_", 100:112)
+    female_sum = .sum("female_", 100:112)
+    female_ratio_sum = female_sum/(male_sum+female_sum)
+    }) 
+```
+
+### **(五)匯入地圖資料**
+
+**資料來源 : <https://gadm.org/download_country.html>**
+
+```{r warning=FALSE}
+ taiwan_sf = st_read("C:\\Users\\User\\Desktop\\R4CSS-master\\AS06\\gadm41_TWN_shp\\gadm41_TWN_2.shp") %>% 
+    mutate(
+      city = case_when(NAME_2 == "Kinmen" ~ "金門縣",
+                       NAME_2 == "Lienkiang" ~ "連江縣",
+                       NAME_2 == "Kaohsiung" ~ "高雄市",
+                       NAME_2 == "New Taipei" ~ "新北市",
+                       NAME_2 == "Taichung" ~ "臺中市",
+                       NAME_2 == "Tainan" ~ "臺南市",
+                       NAME_2 == "Taipei" ~ "臺北市",
+                       NAME_2 == "Changhua" ~ "彰化縣",
+                       NAME_2 == "Chiayi City" ~ "嘉義市",
+                       NAME_2 == "Chiayi County" ~ "嘉義縣",
+                       NAME_2 == "Hsinchu City" ~ "新竹市",
+                       NAME_2 == "Hsinchu County" ~ "新竹縣",
+                       NAME_2 == "Hualien" ~ "花蓮縣",
+                       NAME_2 == "Keelung" ~ "基隆市",
+                       NAME_2 == "Miaoli" ~ "苗栗縣",
+                       NAME_2 == "Nantou" ~ "南投縣",
+                       NAME_2 == "Penghu" ~ "澎湖縣",
+                       NAME_2 == "Pingtung" ~ "屏東縣",
+                       NAME_2 == "Taitung " ~ "台東縣",
+                       NAME_2 == "Taoyuan" ~ "桃園市",
+                       NAME_2 == "Yilan" ~ "宜蘭縣",
+                       NAME_2 == "Yulin" ~ "雲林縣"
+      ))
+```
+
+### **(六)合併資料**
+
+```{r warning=FALSE}
+dta_merged <- taiwan_sf %>% left_join(dta_final, by = c("city"))
+```
+
+### **(七)繪製第一張地圖**
+
+```{r warning=FALSE}
+ggplotly(
+  dta_merged %>% 
+  ggplot(aes(fill = female_ratio_sum)) + 
+  geom_sf(lwd = 0.1, color="black")+  
+  coord_sf(
+    xlim = c(119, 122.5), # 限制經度
+    ylim = c(21.5, 25.5), # 限制緯度
+    expand = FALSE # 取消自動留白
+  )+
+  scale_fill_continuous(high="#EA0000",
+                        low="#FFECEC",
+                        na.value="#BEBEBE",
+                        labels = percent_format(accuracy = 1))+
+  labs(fill = "",
+       title = "2011年~2023年社區發展協會理事長女性人數占比")+
+theme_bruce()
+)
+```
+
+### **(八)繪製第二張地圖**
+
+```{r warning=FALSE}
+
+ggplotly(
+  dta_longe %>%
+  filter(縣市別 %in% cc("新北市, 臺北市, 桃園市, 臺中市, 臺南市, 高雄市")
+         ) %>% 
+ggplot(aes(x = 年份, y = n , color = 性別, group = 性別)) +
+  geom_line() + 
+  geom_point()+
+  facet_wrap(~縣市別) +
+  theme_bruce() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8)
+  ) +
+  labs(title = "2011年~2023年六都社區發展協會理事長人數變化",
+       y = "人數")
+
+ )
+```
+
+### **(九)結論**
+
+**2011～2023年女性擔任社區發展協會理事長的人數占比圖片顯示，大多數縣市女性占比低於20%，多集中在10%上下。僅有新竹市、台東縣與部分北部縣市稍高，約在30%上下。再者，花蓮縣、金門縣等地為空白女性參與可能極低。整體分布仍顯現性別不平衡，且女性理事長占比較低的現況。地圖視覺清楚反映出，基層組織仍顯性別落差。**

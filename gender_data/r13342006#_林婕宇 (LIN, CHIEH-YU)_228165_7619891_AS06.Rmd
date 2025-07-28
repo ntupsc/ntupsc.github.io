@@ -1,0 +1,210 @@
+---
+title: "AS06"
+output: html_document
+date: "2025-05-10"
+---
+
+# **新聞標題：新北**性侵害通報數最高　台中近年數量持續上升
+
+## **詮釋資料：**
+
+1.  name：性侵害事件通報被害人概況
+
+2.  資料範圍：2005\~2023
+
+3.  href：<https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=FA%24cpuq6pb%24jb%24HwzoUPNg%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40>
+
+4.  dep：衛生福利部
+
+5.  cat1：人身安全與司法
+
+6.  cat2：性侵害
+
+7.  複分類：年度別，國籍別，性別，縣市別
+
+    ## 結果詮釋：
+
+    全台性侵通報量集中在雙北，又新北市從2005年起，數量一直高於其他縣市。從2005至2023年來，全台通報量最高的五縣市為：新北市、台中市、桃園市、高雄市、台北市。全台通報總計數量最高是在101年，達到一個高峰點，後來各縣市數量都持續下降，但在110年後，數量又些微回升。
+
+```{install.packages("jsonlite")    # 處理 JSON}
+install.packages("dplyr")       # 資料處理
+install.packages("sf")          # 空間資料 (Shapefile、GeoJSON 等)
+knitr::opts_chunk$set(echo = TRUE)
+options(repos = c(CRAN = "https://cran.rstudio.com"))
+#knitr::opts_chunk$set(echo=T, cache = T, warning = F, message = FALSE, class.output = "output")
+library(knitr)
+#library(kableExtra)
+library(tidyverse)
+
+library(jsonlite)
+library(dplyr)
+library(sf)
+
+
+
+```
+
+```{r}
+
+library(jsonlite)
+
+txt <- readLines("/Users/owner/Downloads/性侵害事件通報被害人概況－國籍分.json", encoding = "UTF-8", warn = FALSE)
+json_data <- fromJSON(paste(txt, collapse = ""))
+df <- as.data.frame(json_data)
+
+# 檢查前幾列
+head(df)
+
+
+```
+
+## 圖1：112年台灣籍女性性侵通報人數分佈圖
+
+```{r}
+library(dplyr)
+
+colnames(df) <- c("國籍", "地區", "性別", "分類1", "分類2", "年份", "人數")
+
+df <- df %>%
+  mutate(地區 = case_when(
+    地區 == "臺北縣" ~ "新北市",
+    地區 == "桃園縣" ~ "桃園市",
+    地區 == "臺中縣" ~ "臺中市",
+   地區 == "臺南縣" ~ "臺南市",
+    TRUE ~地區  # 其他不變
+  ))
+
+
+
+
+
+```
+
+```{r}
+library(dplyr)
+
+summary_df2 <- df %>%
+  filter(
+    年份 == 11200,
+    性別 == "女",
+    國籍 %in% c("本國籍非原住民", "本國籍原住民")
+  ) %>%
+  group_by(地區) %>%
+  summarise(人數 = sum(人數)) %>%
+  rename(地區 = 地區)
+
+```
+
+```{r}
+library(sf)
+library(ggplot2)
+library(dplyr)
+
+# 讀取台灣縣市邊界 geojson
+tw_map <- st_read("/Users/owner/Downloads/twCounty2010.geo.json")
+
+# 假設你的資料叫 summary_df2，欄位為 地區 / 人數
+# 若你是從 Excel 或 CSV 匯入，可以這樣處理
+# summary_df2 <- read.csv("your_file.csv")
+
+# 合併地圖與資料
+tw_map_merged <- tw_map %>%
+  left_join(summary_df2, by = c("COUNTYNAME" = "地區"))
+
+library(showtext)
+
+# 使用 macOS 內建的「蘋方-繁體」
+font_add("pingfang", "/System/Library/Fonts/PingFang.ttc")  
+showtext_auto()
+
+# 繪圖
+ggplot(tw_map_merged) +
+  geom_sf(aes(fill = 人數), color = "white") +
+  scale_fill_gradient(low = "lightyellow", high = "red", na.value = "grey90") +
+  labs(title = "本國籍女性性侵通報人數（112年）",
+       subtitle = "包含原住民與非原住民",
+       fill = "通報人數") +
+  #theme_minimal()
+theme(text = element_text(family = "pingfang"))
+```
+
+## 圖2：台灣各縣市歷年性侵案通報總人數趨勢圖
+
+```{r}
+library(dplyr)
+
+trend_grouped <- df %>%
+  filter(
+    國籍 %in% c("本國籍非原住民", "本國籍原住民"),
+    性別 == "女"
+  ) %>%
+  group_by(地區, 年份) %>%
+  summarise(人數 = sum(人數), .groups = "drop") %>%
+  rename(地區 = 地區, 年份 = 年份)
+library(stringr)
+
+trend_grouped <- trend_grouped %>%
+  mutate(年份 = as.integer(str_remove(as.character(年份), "00$")))
+
+```
+
+```{}
+```
+
+```{r}
+library(dplyr)
+library(plotly)
+
+# 建立 trend_all：不過濾性別或國籍，但排除「總計」地區
+trend_all <- df %>%
+  filter(
+    !地區 %in% c("總計")
+  ) %>%
+  group_by(地區, 年份) %>%
+  summarise(人數 = sum(人數), .groups = "drop") %>%
+  rename(地區 = 地區, 年份 = 年份)
+
+# 把年度的最後兩個 0 去掉（轉成民國年）
+trend_all <- trend_all %>%
+mutate(年份 = as.integer(str_remove(as.character(年份), "00$")))
+
+# 找出總通報量最高的前五縣市
+top5_names <- trend_all %>%
+  group_by(地區) %>%
+  summarise(總人數 = sum(人數)) %>%
+  arrange(desc(總人數)) %>%
+  slice_head(n = 5) %>%
+  pull(地區)
+
+# 標註 top5 縣市
+trend_all <- trend_all %>%
+  mutate(Top5 = ifelse(地區 %in% top5_names, 地區, "其他"))
+
+# 指定顏色（你可以依照實際 top5_names 排序調整）
+top5_colors <- c(
+  setNames(c("red", "blue", "green", "orange", "purple"), top5_names),
+  "其他" = "gray"
+)
+
+# 畫互動式折線圖
+plot_ly(
+  data = trend_all,
+  x = ~年份,
+  y = ~人數,
+  color = ~Top5,
+  colors = top5_colors,
+  text = ~paste("地區：", 地區, "<br>年份：", 年份, "<br>人數：", 人數),
+  hoverinfo = "text",
+  type = "scatter",
+  mode = "lines",
+  split = ~地區,
+  line = list(width = 2)
+) %>%
+  layout(
+    title = "各縣市歷年通報總人數趨勢圖（含所有性別與國籍）",
+    xaxis = list(title = "年份（民國年）"),
+    yaxis = list(title = "通報人數"),
+    legend = list(title = list(text = "前五名縣市"))
+  )
+
+```

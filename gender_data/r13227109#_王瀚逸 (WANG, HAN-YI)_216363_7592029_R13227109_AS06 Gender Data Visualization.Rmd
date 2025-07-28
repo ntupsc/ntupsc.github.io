@@ -1,0 +1,192 @@
+---
+title: "R13227109_AS06 Gender Data Visualization"
+author: "Han-Yi Wang"
+date: "2025-05-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 女性當選立委集中優勢選區：政黨與選情競爭性左右性別代表性
+
+### 詮釋資料：
+
+1.  name：立法委員候選人及當選人數
+
+2.  資料範圍：2016、2020年
+
+3.  href: <https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=xvs94PW0ujkDOn5W3CzmKw%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40>
+
+4.  dep：中央選舉委員會
+
+5.  cat1：權力、決策與影響力
+
+6.  cat2：政治參與
+
+7.  複分類：性別，年度別，縣市別，政黨別
+
+### load package
+
+```{r warning=F}
+library(pacman)
+p_load(tidyverse,sf, bruceR, scales, patchwork, ggrepel)
+
+```
+
+### merge data
+
+```{r warning=F}
+
+dta_105 <- import("C:\\R13227109\\113-2\\news R\\week12\\105_vote.xlsx", as = "tbl") %>% 
+  filter(縣市別 != "總計", `105年` != "-", 性別 != "總計") %>%
+  pivot_wider(names_from = c(`政黨別(105年選舉)`, 性別), values_from = `105年`) %>% 
+  setNames(c("city", "KMT_M", "KMT_F", "DPP_M", "DPP_F" )) %>% 
+  mutate(
+    across(-city, as.numeric),
+    KMT_F_ratio = ifelse((KMT_F + KMT_M) == 0, 0, KMT_F / (KMT_F + KMT_M)),
+    DPP_F_ratio = ifelse((DPP_F + DPP_M) == 0, 0, DPP_F / (DPP_F + DPP_M))
+  )
+
+dta_109 <- import("C:\\R13227109\\113-2\\news R\\week12\\109_vote.xlsx", as = "tbl") %>% 
+  filter(縣市別 != "總計", `109年` != "-", 性別 != "總計") %>% 
+  pivot_wider(names_from = c(`政黨別(109年選舉)`, 性別), values_from = `109年`) %>% 
+  setNames(c("city", "KMT_M", "KMT_F", "DPP_M", "DPP_F" )) %>% 
+  mutate(
+    across(-city, as.numeric),
+    KMT_F_ratio = ifelse((KMT_F + KMT_M) == 0, 0, KMT_F / (KMT_F + KMT_M)),
+    DPP_F_ratio = ifelse((DPP_F + DPP_M) == 0, 0, DPP_F / (DPP_F + DPP_M))
+  )
+
+taiwan_merged  = st_read("C:\\R13227109\\113-2\\news R\\week12\\gadm41_TWN_shp\\gadm41_TWN_2.shp") %>% 
+  mutate(
+    city = case_when(NAME_2 == "Kinmen" ~ "金門縣",
+                     NAME_2 == "Lienkiang" ~ "連江縣",
+                     NAME_2 == "Kaohsiung" ~ "高雄市",
+                     NAME_2 == "New Taipei" ~ "新北市",
+                     NAME_2 == "Taichung" ~ "臺中市",
+                     NAME_2 == "Tainan" ~ "臺南市",
+                     NAME_2 == "Taipei" ~ "臺北市",
+                     NAME_2 == "Changhua" ~ "彰化縣",
+                     NAME_2 == "Chiayi City" ~ "嘉義市",
+                     NAME_2 == "Chiayi County" ~ "嘉義縣",
+                     NAME_2 == "Hsinchu City" ~ "新竹市",
+                     NAME_2 == "Hsinchu County" ~ "新竹縣",
+                     NAME_2 == "Hualien" ~ "花蓮縣",
+                     NAME_2 == "Keelung" ~ "基隆市",
+                     NAME_2 == "Miaoli" ~ "苗栗縣",
+                     NAME_2 == "Nantou" ~ "南投縣",
+                     NAME_2 == "Penghu" ~ "澎湖縣",
+                     NAME_2 == "Pingtung" ~ "屏東縣",
+                     NAME_2 == "Taitung " ~ "台東縣",
+                     NAME_2 == "Taoyuan" ~ "桃園市",
+                     NAME_2 == "Yilan" ~ "宜蘭縣",
+                     NAME_2 == "Yulin" ~ "雲林縣"
+    )) %>% 
+  left_join(dta_105, by = c("city"))
+
+taiwan_merged_2 <- st_read("C:\\R13227109\\113-2\\news R\\week12\\gadm41_TWN_shp\\gadm41_TWN_2.shp") %>% 
+  mutate(
+    city = case_when(NAME_2 == "Kinmen" ~ "金門縣",
+                     NAME_2 == "Lienkiang" ~ "連江縣",
+                     NAME_2 == "Kaohsiung" ~ "高雄市",
+                     NAME_2 == "New Taipei" ~ "新北市",
+                     NAME_2 == "Taichung" ~ "臺中市",
+                     NAME_2 == "Tainan" ~ "臺南市",
+                     NAME_2 == "Taipei" ~ "臺北市",
+                     NAME_2 == "Changhua" ~ "彰化縣",
+                     NAME_2 == "Chiayi City" ~ "嘉義市",
+                     NAME_2 == "Chiayi County" ~ "嘉義縣",
+                     NAME_2 == "Hsinchu City" ~ "新竹市",
+                     NAME_2 == "Hsinchu County" ~ "新竹縣",
+                     NAME_2 == "Hualien" ~ "花蓮縣",
+                     NAME_2 == "Keelung" ~ "基隆市",
+                     NAME_2 == "Miaoli" ~ "苗栗縣",
+                     NAME_2 == "Nantou" ~ "南投縣",
+                     NAME_2 == "Penghu" ~ "澎湖縣",
+                     NAME_2 == "Pingtung" ~ "屏東縣",
+                     NAME_2 == "Taitung " ~ "台東縣",
+                     NAME_2 == "Taoyuan" ~ "桃園市",
+                     NAME_2 == "Yilan" ~ "宜蘭縣",
+                     NAME_2 == "Yulin" ~ "雲林縣"
+    )) %>% 
+  left_join(dta_109, by = c("city"))
+```
+
+### map
+
+```{r warning=F}
+#taiwan_merged %>% select(city, starts_with(cc("KMT, DPP")))
+
+KMT_2016 <- taiwan_merged %>% 
+  ggplot(aes(fill = KMT_F_ratio)) + 
+  geom_sf(lwd = 0.1, color="black")+  
+  coord_sf(
+    xlim = c(119, 122.5), # 限制經度
+    ylim = c(21.5, 25.5), # 限制緯度
+    expand = FALSE # 取消自動留白
+  )+
+  scale_fill_continuous(high="#0000aa",
+                        low="#808080",
+                        labels = percent_format(accuracy = 1))+
+  labs(fill = "",
+       title = "2016大選國民黨各縣市女性當選立委比例")+
+  
+  theme_bruce()
+
+DPP_2016 <- taiwan_merged %>% 
+  ggplot(aes(fill = DPP_F_ratio)) + 
+  geom_sf(lwd = 0.1, color="black")+  
+  coord_sf(
+    xlim = c(119, 122.5), # 限制經度
+    ylim = c(21.5, 25.5), # 限制緯度
+    expand = FALSE # 取消自動留白
+  )+
+  scale_fill_continuous(high="#2EFF71",
+                        low="#808080",
+                        labels = percent_format(accuracy = 1))+
+  labs(fill = "",
+       title = "2016大選民進黨各縣市女性當選立委比例")+
+  theme_bruce()
+
+
+
+KMT_2020 <- taiwan_merged_2 %>% 
+  ggplot(aes(fill = KMT_F_ratio)) + 
+  geom_sf(lwd = 0.1, color="black")+  
+  coord_sf(
+    xlim = c(119, 122.5), # 限制經度
+    ylim = c(21.5, 25.5), # 限制緯度
+    expand = FALSE # 取消自動留白
+  )+
+  scale_fill_continuous(high="#0000aa",
+                        low="#808080",
+                        labels = percent_format(accuracy = 1))+
+  labs(fill = "",
+       title = "2020大選國民黨各縣市女性當選立委比例")+
+  theme_bruce()
+
+DPP_2020 <- taiwan_merged_2 %>% 
+  ggplot(aes(fill = DPP_F_ratio)) + 
+  geom_sf(lwd = 0.1, color="black")+  
+  coord_sf(
+    xlim = c(119, 122.5), # 限制經度
+    ylim = c(21.5, 25.5), # 限制緯度
+    expand = FALSE # 取消自動留白
+  )+
+  scale_fill_continuous(high="#2EFF71",
+                        low="#808080",
+                        labels = percent_format(accuracy = 1))+
+  labs(fill = "",
+       title = "2020大選民進黨各縣市女性當選立委比例")+
+  theme_bruce()
+
+KMT_2016+KMT_2020
+DPP_2016+DPP_2020
+
+```
+
+### 結果詮釋
+
+從2016與2020年大選結果觀察，女性區域立委的當選比例在各縣市呈現地理集中現象，特別分布於雙北與中部地區。進一步納入選情競爭性後發現，無論國民黨或民進黨，女性當選者多集中於本黨優勢或非激烈競爭選區，艱困選區則女性勝選機率顯著偏低，顯示性別代表性仍受限於政黨提名策略與地方政治結構。

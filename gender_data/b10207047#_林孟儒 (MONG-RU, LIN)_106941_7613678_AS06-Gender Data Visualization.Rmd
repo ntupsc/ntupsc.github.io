@@ -1,0 +1,164 @@
+---
+title: "男性感染為主，女性比率微幅上升：AIDS發病縣市分布與歷年性別趨勢圖析"
+author: "林孟儒"
+date: '2025-05-09'
+output: html_document
+---
+新聞標題
+「男性感染為主，女性比率微幅上升：AIDS 發病縣市分布與歷年性別趨勢圖析」
+
+詮釋資料
+
+name：國人AIDS發病統計
+
+資料範圍：全國縣市層級，按性別統計
+
+href：https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_Query.aspx?sn=hjw27xgVsYct5V3!Zpolgg%40%40&statsn=rtW8NDOXdfKA1w82NBtdbw%40%40&d=194q2o4!otzoYO!8OAMYew%40%40
+
+def：依據每期統計資料的發病人數（Val），性別為 Category2Title
+
+cat1：地區（Category1Title）
+
+cat2：性別（Category2Title）
+
+複分類：性別、年度
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(readr)
+library(stringr)
+library(tidyverse)
+library(sf)
+```
+
+
+```{r}
+aids_raw <- fromJSON("C:/Users/monro/Downloads/R4CSS-master/R4CSS-master/國人AIDS發病統計-依縣市分.json")
+aids_df <- as_tibble(aids_raw)
+head(aids_raw)
+```
+
+```{r}
+# 篩出最近期資料（最大期別）
+latest_period <- max(aids_df$Period)
+aids_latest <- aids_df %>% filter(Period == latest_period)
+
+# 轉寬格式（性別分欄）
+aids_wide <- aids_latest %>%
+  select(name = Category1Title, sex = Category2Title, Val) %>%
+  pivot_wider(names_from = sex, values_from = Val, values_fill = 0)
+
+# 新增比值欄位：女性 / (男性 + 1e-5) 避免除以零
+aids_wide <- aids_wide %>%
+  filter(name != "總計") %>%
+  mutate(
+    female = ifelse(is.na(女), 0, 女),
+    male = ifelse(is.na(男), 0, 男),
+    ratio = female / (male + 1e-5))
+
+head(aids_wide)
+```
+
+
+```{r}
+library(sf)
+taiwan_map <- st_read("C:/Users/monro/Downloads/R4CSS-master/R4CSS-master/tw.json")
+
+# 查看欄位名稱
+names(taiwan_map)
+
+library(ggplot2)
+
+ggplot(taiwan_map) +
+  geom_sf(fill = "lightblue", color = "gray30") +
+  labs(title = "台灣縣市邊界地圖") +
+  theme_minimal()
+
+```
+```{r}
+sort(unique(taiwan_map$name))       # 地圖中的地名
+sort(unique(aids_wide$name))        # 你資料中的地名
+```
+
+```{r}
+# 建立英文 → 中文對照表
+county_map <- tibble(
+  name = c(
+    "Changhua", "Chiayi", "Chiayi City", "Hsinchu", "Hsinchu City", "Hualien",
+    "Kaohsiung City", "Keelung City", "Kinmen", "Matsu Islands", "Miaoli",
+    "Nantou", "New Taipei City", "Penghu", "Pingtung", "Taichung City",
+    "Tainan City", "Taipei City", "Taitung", "Taoyuan", "Yilan", "Yunlin"
+  ),
+  county = c(
+    "彰化縣", "嘉義縣", "嘉義市", "新竹縣", "新竹市", "花蓮縣",
+    "高雄市", "基隆市", "金門縣", "連江縣", "苗栗縣", "南投縣", "新北市",
+    "澎湖縣", "屏東縣", "臺中市", "臺南市", "臺北市", "臺東縣",
+    "桃園市", "宜蘭縣", "雲林縣"
+  )
+)
+
+# 中文地名 → 英文對應，以利與 taiwan_map 合併
+aids_wide_en <- left_join(aids_wide, county_map, by = c("name" = "county")) %>%
+  select(name = name.y, female, male, ratio)
+
+# 合併地圖與資料
+map_data <- left_join(taiwan_map, aids_wide_en, by = "name")
+
+```
+
+```{r}
+# 繪圖：AIDS 女性／男性比率地圖
+palette <- c(
+  "#deebf7",  # 最淺藍
+  "#c6dbef",
+  "#9ecae1",
+  "#6baed6",  # 主色接近 #377eb8
+  "#4292c6",
+  "#2171b5",
+  "#084594"  
+)
+
+ggplot(map_data) +
+  geom_sf(aes(fill = ratio), color = "white") +
+  scale_fill_gradientn(
+    colours = rev(palette), 
+    limits = c(0, 0.7),
+    na.value = "grey90",
+    name = "女性／男性"
+  ) +
+  labs(title = "台灣各縣市女性/男性 AIDS 發病比率") +
+  theme_minimal()
+```
+
+
+```{r}
+aids_df <- jsonlite::fromJSON("C:/Users/monro/Downloads/R4CSS-master/R4CSS-master/國人AIDS發病統計-依縣市分.json") %>%
+  as_tibble()
+
+# 篩選出全國（Category1Title == "總計"）且有性別資訊
+aids_total_by_year_gender <- aids_df %>%
+  filter(Category1Title == "總計", Category2Title %in% c("男", "女")) %>%
+  group_by(year = Period, gender = Category2Title) %>%
+  summarise(total = sum(Val), .groups = "drop")
+```
+
+
+```{r}
+library(ggplot2)
+
+ggplot(aids_total_by_year_gender, aes(x = factor(year), y = total, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("男" = "#377eb8", "女" = "#e41a1c")) +
+  labs(
+    title = "歷年 AIDS 發病人數（按性別統計）",
+    x = "年度", y = "人數", fill = "性別"
+  ) +
+  theme_minimal()
+```
+
+歷年資料顯示，男性發病數於民國105年達高峰後逐年下降，此現象應與台灣自104年起積極推動愛滋病毒篩檢有關，因此當年度篩檢出現「揪出黑數」的效應，此後愛滋篩檢發病人數又逐漸趨於穩定。從地圖可見，全台各縣市AIDS發病以男性為主，女性比例普遍低於0.3，僅少數地區（如嘉義市）接近或超過0.5。女性人數雖遠少於男性，但長期占比穩定，顯示女性族群的傳染風險不容忽視，仍需持續關注與預防。

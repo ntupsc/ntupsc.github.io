@@ -1,0 +1,231 @@
+---
+title: "AS06"
+author: "許采蘋"
+date: "2025-05-08"
+output: html_document
+---
+
+# 2021兒少性剝削緊急安置性別差異大：男性通報缺席，八縣市零緊急安置紀錄
+
+##資料說明
+
+-   name：安置兒童及少年性剝削被害人統計。
+
+-   資料範圍： 2017-2022年。
+
+-   href：[https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=m2CMJLY1IhdfPWPTcep9SQ%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40](https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=m2CMJLY1IhdfPWPTcep9SQ%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=m2CMJLY1IhdfPWPTcep9SQ%40%40&d=m9ww9odNZAz2Rc5Ooj%24wIQ%40%40)
+
+-   dep：衛生福利部。
+
+-   cat1：人身安全與司法。
+
+-   cat2：性剝削、人口販運。
+
+-   複分類：年度別，性別，安置兒少性剝削被害人，縣市別。
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 載入套件
+
+```{r}
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+
+```
+
+## 載入資料
+
+我選用的資料為「安置兒童及少年性剝削被害人統計(民國106年以後)」，目前這筆資料最後公佈到民國112年（西元2023年），資料格視為JSON檔。
+
+```{r}
+
+data <- fromJSON("data/sex_explot.json")
+```
+
+## 資料清洗
+
+原本raw data中的總計為全國總計人數，為方便製作各縣市差異的視覺呈現，因此將全國數量去除，並將民國年份轉為西元年分。
+
+```{r}
+
+df <- data %>%
+    rename(
+        type = Category1Title, #安置類型
+        gender = Category2Title, #性別
+        county = Category3Title, #縣市別
+        year = Period, #年分
+        value = Val #人數
+    )%>%
+    filter(gender %in% c("男","女"),
+           county != "總計" )%>%
+    mutate(
+    year = 1911 + as.numeric(substr(year, 1, 3)), 
+    type_group = case_when(
+      type == "緊急安置人數" ~ "緊急安置",
+      type == "安置入住總人次" ~ "安置總人次",
+      type %in% c("兒童及少年福利機構", "寄養家庭", "中途學校", "其他適當之醫療、教育機構") ~ "安置類型",
+      TRUE ~ "其他"
+    ),
+    type_detail = type 
+  )
+
+```
+
+### 緊急安置人數
+
+由於在計算性別比例（ratio）時，若單純以「男性人數／女性人數」進行計算，當女性人數為0時會出現無限大（Inf）的狀況，導致視覺化上難以呈現。因此在將資料轉為wide格式時，我將「男性為0」的情況標記為 NA，並進一步排除總人數（女＋男）為0的觀測值。
+
+此外，在觀察原始資料的分布時，我注意到不少縣市出現女性人數遠高於男性的現象，為了進一步呈現這種差異，採用了性別差異指數（diff_index）作為視覺化的依據。計算方式為：diff_index = （女 − 男） / （女 + 男）。
+
+指數的範圍為 −1 到 1，當值越接近 1，代表該縣市安置者幾乎僅為女性；接近 −1 則為幾乎僅有男性；0表示男女數量相等；若男女皆為0，則該值為缺值（NA）。與（女／男） 這類單一比例不同，diff_index 不會因為分母為0 而出現無限值，且能同時反映出性別比例偏向與有無通報紀錄，適合作為全國性比較與地圖視覺化的主要指標。
+
+```{r}
+
+df_emer_place <- df%>%
+    filter(type_group == "緊急安置") %>%
+    group_by(county, year, gender) %>%
+    summarise(value = sum(value), .groups = "drop") %>%
+    pivot_wider(names_from = gender, values_from = value, values_fill = 0) %>%
+  mutate(
+    ratio = ifelse(男 == 0, NA, 女 / 男),
+    diff_index = ifelse (女+男 == 0, NA, (女-男)/(女+男))
+  )
+
+```
+
+### 安置入住總人數
+
+```{r}
+
+df_total_placement <- df %>%
+    filter(type_group == "安置總人次") %>%
+    group_by(county, year, gender) %>%
+    summarise(value = sum(value), .groups = "drop") %>%
+    pivot_wider(names_from = gender, values_from = value, values_fill = 0) %>%
+  mutate(
+    ratio = ifelse(男== 0, NA, 女 / 男),
+    diff_index = ifelse(女 + 男== 0,NA, (女 - 男) / (女 + 男))
+  )
+
+```
+
+###安置類型(細分類)
+
+```{r}
+
+df_type_detail <- df%>%
+     filter(type_group == "安置類型") %>%
+    group_by(county, year, type_detail, gender) %>%
+    summarise(value = sum(value), .groups = "drop") %>%
+  pivot_wider(names_from = gender, values_from = value, values_fill = 0) %>%
+  mutate(
+    ratio =ifelse(男== 0, NA, 女 / 男),
+    diff_index = ifelse(女 + 男== 0,NA, (女 - 男) / (女 + 男))
+  )
+
+```
+
+## 串接地圖圖資與繪圖
+
+### 載入地圖圖資
+
+```{r}
+#install.packages("sf")
+library(sf)
+#install.packages("rmapshaper")
+library(rmapshaper)
+
+taiwan_map <- st_read("data/shapefiles/COUNTY_MOI_1140318.shp")
+
+taiwan_map_simple <- ms_simplify(taiwan_map, keep = 0.05)
+
+```
+
+### 合併圖資與縣市資料
+
+```{r}
+
+df_2021 <- df_emer_place %>% filter(year == 2021)
+
+map_data <- taiwan_map %>%
+  left_join(df_2021, by = c("COUNTYNAME" = "county"))
+
+```
+
+### 2021年各縣市緊急安置人數性別差異地圖
+
+```{r}
+library(ggplot2)
+
+ggplot(map_data) +
+  geom_sf(aes(fill = diff_index), color = "black", size = 0.000000001,na.rm = FALSE) +
+  scale_fill_gradient2(
+    low = "blue", high = "red", mid = "white",
+    midpoint = 0, na.value = "gray90",
+    limits = c(-1,1),
+    name = "性別差異指數\n((女−男)/(女+男))"
+  ) +
+  labs(
+    title = "2021年各縣市緊急安置人數性別差異地圖",
+    caption = "資料來源：安置兒童及少年性剝削被害人統計"
+  ) +
+  theme_minimal()+
+    coord_sf(xlim = c(118, 122.5), ylim = c(21.5, 26.5), expand = FALSE)
+
+```
+
+此地圖以性別差異指數 ((女−男)/(女+男))呈現各縣市在兒少性剝削被害人緊急安置上的性別分布。紅色代表女性比例高、藍色代表男性比例高，灰色則表示當年度該縣市無安置紀錄。
+
+### 2021年各縣市緊急安置人數（依性別）
+
+```{r}
+df_2021_long <- df_emer_place %>%
+  filter(year == 2021) %>%
+  pivot_longer(cols = c("男", "女"), names_to = "gender", values_to = "count")
+
+ggplot(df_2021_long, aes(x = reorder(county, count), y = count, fill = gender)) +
+  geom_col(position = "dodge") +
+  coord_flip() +
+  labs(title = "2021年各縣市緊急安置人數（依性別）")
+
+```
+
+可從此圖觀察到多數縣市僅有女性被安置，顯示性別差異極高。僅有桃園市出現個別男性通報，其他多數縣市男性人數為0。
+
+### 2017–2022年各縣市兒少緊急安置性別差異指數變化
+
+```{r}
+ggplot(df_emer_place, aes(x = year, y = diff_index)) +
+  geom_line(color = "#2C3E50", linewidth = 1, na.rm = FALSE) +
+  geom_point(size = 2, color = "#E74C3C") +
+  facet_wrap(~ county, ncol = 5) +
+  labs(
+    title = "2017–2023年各縣市兒少緊急安置性別差異指數變化",
+    subtitle = "指數為 ((女−男)/(女+男))；紅點表示該年有資料，缺線表示該年無通報",
+    x = "年份", y = "性別差異指數"
+  ) +
+  scale_y_continuous(limits = c(-1, 1)) +
+  theme_minimal(base_size = 10) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 10),
+    panel.grid.minor = element_blank()
+  )
+```
+
+本圖呈現2017至2023年間各縣市緊急安置案件的性別差異指數變化，指數計算方式為 (女−男)/(女+男)。紅點表示該年有安置紀錄，線條連接指數可計算的年度。大多數縣市長年顯示出女性明顯多於男性的安置比例，部分縣市則出現劇烈波動，反映件數稀少或性別比例不穩。此圖亦可觀察制度是否在不同地區呈現執行落差或性別偏差的現象。
+
+## 結果詮釋（Finding）
+
+從 2021 年的資料來看，兒少性剝削被害人的緊急安置呈現明顯的性別落差，全台僅桃園市有男性安置個案，其餘縣市安置者幾乎全為女性。此外，更有包括連江縣、金門縣、宜蘭縣等 8 個縣市在該年度完全無通報紀錄。
+
+這樣的現象顯示，兒少性剝削案件的通報與安置制度在實際執行過程中，可能因地區差異而呈現不一致的啟動標準與性別認知的偏差。雖然緊急安置制度原本設計為所有受害兒少所用，但在實務上，卻可能因資源分布不均或性別刻板印象，導致安置的處置主要執行於女性，男性兒少相對來說較為隱形。而從2017–2023年各縣市兒少緊急安置性別差異指數變化可看到，大多數縣市也長期呈現「僅有女性通報」的狀況。
+
+除了制度上的漏接外，不排除男性兒少在性剝削案件中的實際案量原本就較低，不過此一差異可能與男性較不易被視為受害者、較難向他人揭露、通報意願低等社會性別因素相關，因此在解讀性別差異時，須回到社會結構因素進行分析。

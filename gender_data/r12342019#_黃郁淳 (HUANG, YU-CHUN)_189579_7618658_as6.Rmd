@@ -1,0 +1,129 @@
+---
+title: "AS06 Gender Data Visualization"
+author: "R1242019 黃郁淳"
+date: "2025-05-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(jsonlite)
+library(sf)
+```
+
+# 近十年家暴案兒少類佔二成！疫情後通報量呈回升趨勢
+
+## 詮釋資料
+
+-   name：家庭暴力事件通報案件統計（件數）-案件類型
+
+-   資料範圍：2005-2023
+
+-   href：<https://www.gender.ey.gov.tw/gecdb/Stat_Statistics_DetailData.aspx?sn=cTThlBNp7GY6HOPQ69lylA%40%40&d=194q2o4!otzoYO!8OAMYew%40%40>
+
+-   dep：衛生福利部
+
+-   cat1：人身安全與司法
+
+-   cat2：家庭暴力
+
+-   複分類：年度別、縣市別、案件類型別
+
+## 資料處理
+
+```{r}
+dom_raw <- fromJSON("dom_vio_type.json") %>% 
+    rename(type = Category1Title,
+           county = Category2Title,
+           count = Val) %>% 
+    mutate(year = Period/100+1911,
+           county = case_when(
+               county %in% c("臺北縣") ~ "新北市",
+               county %in% c("桃園縣") ~ "桃園市",
+               county %in% c("臺中縣","臺中市") ~ "臺中市",
+               county %in% c("臺南縣","臺南市") ~ "臺南市",
+               county %in% c("高雄縣","高雄市") ~ "高雄市",
+               TRUE ~ county
+           )) %>% 
+    select(year,county,type,count) %>% 
+    filter(!type %in% c("總計","婚姻、離婚或同居關係暴力/同性伴侶","婚姻、離婚或同居關係暴力/異性伴侶") & county != "總計") %>% 
+    group_by(year,county,type) %>% 
+    summarize(
+        count = sum(count),
+    ) %>% 
+    ungroup()
+
+dom_child <- dom_raw %>% 
+    group_by(year,county) %>% 
+    summarize(
+        count_all = sum(count),
+        count_child = sum(count[type == "兒少保護"])
+    ) 
+
+dom_child_county_10yr <- dom_child %>% 
+    filter(year >= 2014) %>% 
+    group_by(county) %>% 
+    summarize(
+        count_all = sum(count_all),
+        count_child = sum(count_child)
+    ) %>% 
+    mutate(child_perc = round(count_child/count_all,3)*100)
+
+dom_child_2011_2023 <- dom_child %>% 
+    filter(year >= 2011) %>% 
+    group_by(year) %>% 
+    summarize(
+        count_all = sum(count_all),
+        count_child = sum(count_child)
+    ) %>% 
+    mutate(child_perc = round(count_child/count_all,3)*100)
+
+county_ms_simp <- st_read("shapefiles/COUNTY_MOI_1090820.shp") %>%
+  st_simplify(dTolerance = 100)
+
+child_map <- right_join(county_ms_simp, dom_child_county_10yr,by = c("COUNTYNAME"="county"))
+```
+
+## 近十年（2014-2023）兒少保護占家暴案件比例（縣市別）
+
+**指標說明**
+
+取 2014 年至 2023 年間各縣市家庭暴力事件通報中「兒少保護」類型事件累計數量，計算其佔整體家暴案件比例。
+
+計算公式：期間兒少保護案件累計通報數量／期間家庭暴力案件累計通報總數量 \* 100（%\`)
+
+```{r}
+child_map %>%
+  ggplot(aes(fill = child_perc)) +
+  geom_sf(color = "white", size = 0.2) +
+    geom_sf_text(
+        data = st_centroid(child_map),
+        aes(label = round(child_perc, 1)), size = 3, color = "black") +
+  scale_fill_gradient(low = "#E9FCF8", high = "#1DC9A4") +
+  coord_sf(
+    xlim = c(119, 122.5), # 限制經度
+    ylim = c(21.5, 25.5), # 限制緯度
+    expand = FALSE # 取消自動留白
+  )+
+    labs(x ="",y = "",fill = "比率（%）")
+```
+
+上圖呈現全台各縣市近十年（2014-2023）累計通報兒少保護類型家暴案件佔全體家暴案件之比例。平均而言，兒少保護案件佔全體家暴案件約一至二成，且六都比例略高於其他縣市。
+
+## 2011-2023 全台兒少保護家暴案件通報數量及占比
+
+```{r}
+dom_child_2011_2023 %>% 
+  ggplot(aes(x = year)) + 
+    geom_col(aes(y = count_child * 0.0005), fill = "#546E7A")+
+    geom_line(aes(y = child_perc),color = "#37474F",size = 0.75) +
+    scale_y_continuous(
+    name = "占整體通報案件比例（%）",  
+    sec.axis = sec_axis(~ . / 0.0005, name = "通報案件數")  
+  ) 
+```
+
+上圖為 2011年《兒童及少年福利與權益保障法》（簡稱《兒少法》）修正公布後，兒少保護類型家暴案件通報趨勢。根據《兒少法》規定，任何人知悉兒童及青少年有受虐情形，得直接通報縣市主管機關。2011 年法案修正公布後，通報數量連續三年大幅上升，顯示過往被視為家醜不外揚的兒少家庭暴力事件逐漸浮出水面。
+
+2014 年公布《兒童權利公約施行法》，推動聯合國兒童權利公約（Convention of the Right of the Child）在國內社會的落實，並持續強化通報及預防體制，2014～2018 年間兒少保護案件呈下降趨勢，然而，2019 年起通報案件數有回升跡象，可能與 COVID-19 疫情期間實施隔離措施，造成家庭成員間關係緊張有關。

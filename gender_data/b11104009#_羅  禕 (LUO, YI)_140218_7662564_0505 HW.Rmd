@@ -1,0 +1,283 @@
+---
+title: "北北基桃地區性侵害通報：12至18歲少女成主要受害群體"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## 詮釋資料
+
+- name: 性侵害事件通報被害人概況－年齡分
+- 資料範圍: 112年度 臺北市、新北市、基隆市、桃園市
+- href: 社會福利統計專區-性侵害事件通報被害人概況
+- dep: 行政院性別平等會
+- cat1: 社會福利
+- cat2: 保護服務
+- 複分類: 性別、年齡層
+
+```{r load_libraries}
+# 載入所需的套件
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(RColorBrewer)
+library(scales)
+library(readr)
+library(tidyr) 
+```
+
+```{r load_data}
+# 載入性侵害資料
+sexual_assault_data <- data.frame(
+  county = c(
+    # 新北市 - 各年齡組
+    rep("新北市", 22),
+    # 臺北市 - 各年齡組
+    rep("臺北市", 22),
+    # 桃園市 - 各年齡組
+    rep("桃園市", 22),
+    # 基隆市 - 各年齡組
+    rep("基隆市", 22)
+  ),
+  gender = c(
+    # 新北市 - 男女分組
+    rep(c("男", "女"), 11),
+    # 臺北市 - 男女分組
+    rep(c("男", "女"), 11),
+    # 桃園市 - 男女分組
+    rep(c("男", "女"), 11),
+    # 基隆市 - 男女分組
+    rep(c("男", "女"), 11)
+  ),
+  age_group = c(
+    # 各縣市的年齡組別（每組重複兩次，分別對應男女）
+    rep("總計", 2),
+    rep("0-未滿6歲", 2),
+    rep("6-未滿12歲", 2),
+    rep("12-未滿18歲", 2),
+    rep("18-未滿24歲", 2),
+    rep("24-未滿30歲", 2),
+    rep("30-未滿40歲", 2),
+    rep("40-未滿50歲", 2),
+    rep("50-未滿65歲", 2),
+    rep("65歲以上", 2),
+    rep("不詳", 2),
+    
+    rep("總計", 2),
+    rep("0-未滿6歲", 2),
+    rep("6-未滿12歲", 2),
+    rep("12-未滿18歲", 2),
+    rep("18-未滿24歲", 2),
+    rep("24-未滿30歲", 2),
+    rep("30-未滿40歲", 2),
+    rep("40-未滿50歲", 2),
+    rep("50-未滿65歲", 2),
+    rep("65歲以上", 2),
+    rep("不詳", 2),
+    
+    rep("總計", 2),
+    rep("0-未滿6歲", 2),
+    rep("6-未滿12歲", 2),
+    rep("12-未滿18歲", 2),
+    rep("18-未滿24歲", 2),
+    rep("24-未滿30歲", 2),
+    rep("30-未滿40歲", 2),
+    rep("40-未滿50歲", 2),
+    rep("50-未滿65歲", 2),
+    rep("65歲以上", 2),
+    rep("不詳", 2),
+    
+    rep("總計", 2),
+    rep("0-未滿6歲", 2),
+    rep("6-未滿12歲", 2),
+    rep("12-未滿18歲", 2),
+    rep("18-未滿24歲", 2),
+    rep("24-未滿30歲", 2),
+    rep("30-未滿40歲", 2),
+    rep("40-未滿50歲", 2),
+    rep("50-未滿65歲", 2),
+    rep("65歲以上", 2),
+    rep("不詳", 2)
+  ),
+  count = c(
+    # 新北市數據
+    251, 1294, 8, 33, 33, 95, 161, 474, 18, 226, 10, 159, 17, 169, 2, 82, 1, 40, 0, 9, 1, 7,
+    # 臺北市數據
+    154, 806, 6, 26, 29, 33, 70, 202, 16, 147, 9, 135, 16, 133, 2, 71, 4, 42, 1, 11, 1, 6,
+    # 桃園市數據
+    170, 883, 4, 15, 18, 54, 111, 414, 8, 106, 12, 96, 9, 92, 6, 71, 1, 29, 1, 6, 0, 0,
+    # 基隆市數據
+    25, 135, 0, 2, 1, 8, 23, 73, 0, 17, 1, 5, 0, 17, 0, 8, 0, 4, 0, 1, 0, 0
+  )
+)
+
+# 將 count 中的 0 值（原始資料中的「-」）轉換為 NA
+sexual_assault_data$count[sexual_assault_data$count == 0] <- NA
+
+# 查看資料結構
+head(sexual_assault_data)
+```
+
+```{r summarize_data}
+# 明確指定使用 dplyr 中的函數，避免套件衝突
+# 移除總計和不詳的數據行，僅分析具體年齡組
+analysis_data <- sexual_assault_data %>%
+  dplyr::filter(age_group != "總計" & age_group != "不詳")
+
+# 計算每個縣市的性別總數（不含總計行）
+county_gender_summary <- analysis_data %>%
+  dplyr::group_by(county, gender) %>%
+  dplyr::summarise(total = sum(count, na.rm = TRUE)) %>%
+  dplyr::ungroup()
+
+# 轉換為寬資料格式以計算比率
+county_gender_wide <- county_gender_summary %>%
+  tidyr::pivot_wider(names_from = gender, values_from = total) %>%
+  dplyr::mutate(
+    total_victims = 男 + 女,
+    female_ratio = 女 / total_victims,
+    male_ratio = 男 / total_victims,
+    female_male_ratio = 女 / 男  # 女性/男性比例作為指標
+  )
+
+print(county_gender_wide)
+
+# 為了展示，也計算包含總計的數據
+county_total_summary <- sexual_assault_data %>%
+  dplyr::filter(age_group == "總計") %>%
+  dplyr::select(county, gender, count) %>%
+  tidyr::pivot_wider(names_from = gender, values_from = count) %>%
+  dplyr::mutate(
+    total_victims = 男 + 女,
+    female_ratio = 女 / total_victims,
+    male_ratio = 男 / total_victims,
+    female_male_ratio = 女 / 男
+  )
+
+print(county_total_summary)
+```
+
+## 縣市層級地圖：性侵害通報性別比例
+
+```{r create_map}
+
+# 將女性/男性比例轉換為用於熱力圖的數據框
+## 因縣市地圖繪製困難，因此改由其他方式完成比較
+heatmap_data <- county_total_summary %>%
+  mutate(
+    county_label = county,
+    ratio_category = cut(
+      female_male_ratio, 
+      breaks = c(0, 5, 5.2, 5.4, 5.6),
+      labels = c("< 5.0", "5.0-5.2", "5.2-5.4", "> 5.4"),
+      include.lowest = TRUE
+    )
+  )
+
+# 繪製熱力表格圖
+ggplot(heatmap_data, aes(x = "指標", y = county, fill = female_male_ratio)) +
+  geom_tile(color = "white", size = 0.5) +
+  geom_text(aes(label = sprintf("%.2f", female_male_ratio)), color = "white", size = 4) +
+  scale_fill_gradient(low = "#FFC300", high = "#C70039", 
+                     name = "女性/男性比例") +
+  labs(
+    title = "北北基桃地區性侵害通報性別比例",
+    x = "",
+    y = ""
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 0, size = 10),
+    axis.text.y = element_text(size = 12),
+    legend.position = "bottom",
+    panel.grid = element_blank()
+  )
+```
+
+由於無法直接繪製實際地圖，我們以熱力表格方式呈現各縣市的女性/男性比例：
+
+```{r show_map_data}
+# 使用總計數據計算比例
+county_total_summary %>% 
+  dplyr::select(county, 男, 女, female_male_ratio) %>%
+  dplyr::rename(`女性/男性比例` = female_male_ratio) %>%
+  knitr::kable(caption = "各縣市性侵害通報性別比例")
+```
+
+## 為什麼使用「女性/男性」比例作為指標？
+
+選擇「女性/男性」比例作為評估指標，是因為該指標能夠直觀地反映性侵害事件中的性別差異現象。相較於單純的男女數量比較或百分比，這個比例能更清楚展示女性受害者相對於男性受害者的比例關係。當這個比值越高，表示女性相對於男性的受害報告比例越高。
+
+從數據可見，四個城市的女性/男性比例均大於5，意味著女性受害者人數是男性的5倍以上。此指標不僅反映了性侵害事件中的性別不平等，也可能指出社會結構中的性別弱勢問題，以及針對不同性別應當採取的差異化保護措施。使用這個指標有助於政策制定者理解性侵防治工作中應特別關注的群體。
+
+## 各縣市性侵害通報性別組成長條圖
+
+```{r create_barchart}
+# 使用總計數據繪製長條圖
+total_data <- sexual_assault_data %>%
+  dplyr::filter(age_group == "總計") %>%
+  dplyr::select(county, gender, count)
+
+# 繪製長條圖
+ggplot(total_data, aes(x = county, y = count, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = count), position = position_dodge(width = 0.9), vjust = -0.5, size = 3.5) +
+  scale_fill_manual(values = c("男" = "#4575b4", "女" = "#d73027")) +
+  labs(
+    title = "北北基桃地區性侵害通報案件性別分布",
+    x = "縣市",
+    y = "通報人數",
+    fill = "性別"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    legend.position = "bottom"
+  )
+```
+
+```{r age_gender_analysis}
+# 分析不同年齡層的性別分布（排除總計和不詳）
+age_gender_summary <- sexual_assault_data %>%
+  dplyr::filter(age_group != "總計" & age_group != "不詳") %>%
+  dplyr::group_by(county, age_group, gender) %>%
+  dplyr::summarise(total = sum(count, na.rm = TRUE), .groups = "drop") %>%
+  dplyr::ungroup()
+
+# 重新排序年齡層
+age_order <- c(
+  "0-未滿6歲", "6-未滿12歲", "12-未滿18歲", 
+  "18-未滿24歲", "24-未滿30歲", "30-未滿40歲", 
+  "40-未滿50歲", "50-未滿65歲", "65歲以上"
+)
+age_gender_summary$age_group <- factor(age_gender_summary$age_group, levels = age_order)
+
+# 繪製各縣市各年齡層的性別分布
+ggplot(age_gender_summary, aes(x = age_group, y = total, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~ county, scales = "free_y") +
+  scale_fill_manual(values = c("男" = "#4575b4", "女" = "#d73027")) +
+  labs(
+    title = "北北基桃地區性侵害通報案件年齡層與性別分布",
+    x = "年齡層",
+    y = "通報人數",
+    fill = "性別"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  )
+```
+
+## 進階地圖視覺化 (替代方案)
+
+如果您需要正確的地圖視覺化，以下是幾種選擇：
+
+```{r advanced_map, eval=FALSE}
+
+## FINDINGS
+
+112年北北基桃地區性侵害通報數據顯示，四個城市中均呈現嚴重的性別差異，女性受害人數為男性的5-6倍。尤其在12-18歲年齡層，女性受害人數特別高，新北市474人、桃園市414人、台北市202人及基隆市73人，顯示青少女為主要受害群體。新北市總通報數最高，達1,545人，其中女性佔84%。從分佈數據來看，青少年保護、性別平等教育及防治工作仍有顯著空間，特別是針對青少女族群的保護措施亟需加強。
